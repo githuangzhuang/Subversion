@@ -45,6 +45,7 @@ real_server 192.168.4.100 443 {
             }
          #获取digest值： curl 192.168.4.100 | md5sum是对页面的监控，有没有被攻击
 }
+启服务：keepalived
 
 二..haproxy负载平衡集群
 调度器：软件 haproxy
