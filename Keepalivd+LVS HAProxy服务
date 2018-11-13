@@ -1,4 +1,4 @@
-keepalived+lvs服务器
+一.keepalived+lvs服务器
 1.后端服务器配置vip
   /etc/sysconfig/network-scrips/ifcfg-lo:0
 2.防止地址冲突 /etc/sysctl.conf
@@ -12,12 +12,14 @@ interface eth0               #定义网络接口，必须是eth0
 virtual_router_id 60      #分组，主辅VRID号必须一致
 priority 100             #优先级
 auth_pass 1111           #主辅密码必须一致
+
 virtual_ipaddress {192.168.4.15} #配置VIP
 virtual_server 192.168.4.15 80 {  #ipvsadm的vip规则
 delay_loop 6
 lb_algo wrr            #调度算法权重
 lb_kind DR             #lvs的模式
 protocol TCP           
+
 real_server 192.168.4.100 80 { #后端服务器真实ip，端口
 weight 1                #权重
 TCP_CHECK {
@@ -25,6 +27,7 @@ connect_timeout 3
 nb_get_retry 3
 delay_before_retry 3
 }
+
 real_server 192.168.4.100 {
 weight 1
 TCP_CHECK {
@@ -32,6 +35,7 @@ connect_timeout 3
 nb_get_retry 3
 delay_before_retry 3
 }
+
 real_server 192.168.4.100 443 {
         weight 1
         SSL_GET {
@@ -42,7 +46,7 @@ real_server 192.168.4.100 443 {
          #获取digest值： curl 192.168.4.100 | md5sum是对页面的监控，有没有被攻击
 }
 
-haproxy负载平衡集群
+二..haproxy负载平衡集群
 调度器：软件 haproxy
 配置文件 /etc/haproxy/haproxy.cfg
 listen webs 0.0.0.0:80
