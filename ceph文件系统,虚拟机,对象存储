@@ -1,0 +1,66 @@
+二.ceph文件系统
+域名解析 		/etc/hosts
+私钥     		ssh-copy-id
+时间同步 		/etc/chrony.conf
+yum源和ceph源
+2.部署元数据服务器 node4
+  软件 		ceph-mds
+3.给node4拷贝配置文件和启动mds服务,并同步配置文件和key，在部署节点即(node1)目录ceph-cluster上做
+	ceph-deploy mds create node4
+	ceph-deploy admin node4
+	
+4.创建存储池
+	ceph osd pool create cephfs_data 128
+	ceph osd pool create cephfs_metadata 128
+        
+5.创建ceph文件系统
+  ceph fs new myfs1 cephfs_metadata cephfs_data new fs with metadata pool 2 and data pool 1	
+
+6.客户端挂载
+	mkdir /cephfs
+	mount -t ceph (node1IP):6789:/ /cephfs -o name=admin,secret=密钥
+ #密钥在/etc/ceph/ceph.client.admin.keyring找
+
+三.创建对象存储服务器
+域名解析 		/etc/hosts
+私钥     		ssh-copy-id
+时间同步 		/etc/chrony.conf
+yum源和ceph源
+2.部署RGW软件,都在node1上操作
+	ceph-deploy install --rgw node5
+3.同步配置文件和密钥到node5,在node1,ceph-cluster目录中做
+	ceph-deploy admin mode5
+4.启rgw服务
+	ceph-deploy rgw create node5
+5.若要修改服务端口node5上
+	/etc/ceph/ceph.conf
+ [client.rgw.node5]
+        host = node5
+          rgw_frontends = "civetweb port=8000"
+	
+使用第三方软件访问，在node5创建账户
+
+创建虚拟机
+1.在node1创建磁盘镜像
+	rbd create vm1 --imaege-feature layering --size 10G
+2.部署客户端环境，真实机上做,rhcs源
+软件 ceph-common
+拷贝文件 ceph.conf ;ceph.client.admin.keyring ----->
+		/etc/ceph
+可以使用virt-manager创建KVM虚拟机
+3.配置libvirt secret
+	virsh secret-define --file ssecret.xml
+4.添加账户密钥
+virsh secret-set-value --secret 用户ID --base64 密码
+#用户ID在第3步产生；密码cat  ceph.client.admin.keyring
+
+用命令修改xml配置文件
+	virsh edit vm1
+ <disk type='network'..>
+<driver name='qemu' type='raw'/>
+<auth username='admin'>
+<secret type='ceph' uuid=''> </auth>
+<source protocol='rbd' name='rbd/vm1'> 
+<host name='node1IP' port='6789'/> </source>
+<target dev='vda' bus='virtio'/>
+<address type='pci' domain='' bus='' slot='' function=''> </disk>
