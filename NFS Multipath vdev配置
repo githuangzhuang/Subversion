@@ -13,7 +13,7 @@ chmod 777 /var/ftp/pub
 启服 vsftpd
 
 Multipath多路径
-两个ip都能发现后端储存sda和sdb
+同网段，两个ip都能发现后端储存sda和sdb
 软件---->device-mapper-multipath;
 利用yum list | grep multipath 
 生成配置文件 cp /usr/share/doc/device-mapper-multipath../multipath.com  /etc/
