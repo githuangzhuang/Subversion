@@ -121,6 +121,7 @@ date       日期  20090813              #2009年8月13号
 day       日期    日
 time        时间  083000                  早上8点30分整
 datetime   日期时间  20090813160630    2009年8月13号下午4点6分13妙
+timestamp   不指定时间就取系统时间，跟datetime格式一样
 
 >create table t4 (
     -> name char(10),
