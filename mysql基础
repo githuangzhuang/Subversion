@@ -101,7 +101,7 @@ show create table表名；           #显示创建表时的命令
 双精度    double
 
 
-create table t2( age tinyint unsigned, pay float(7,2) )        #unstgned 没有符号的存储范围
+create table t2( age tinyint unsigned, pay float(7,2) )        #unsigned 没有符号的存储范围
 
 tinyint          -128~127        0~255
 smallint         -32768~32767   0~65535
