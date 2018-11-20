@@ -1,0 +1,104 @@
+复制表
+作用：   1.备份表   2.快速建表 
+复值出的表(key)键值不会复制 ，复制什么表取决于查询结果     
+	create table 新表 select * from 源表
+create table 新表 select * from 源表 where 1=2;       # 创建一张空表
+
+多表查询：
+	也称连接查询，将2个或以上的表，按某个条件连接起来，从中选取需要的数据，当多个表中，存在相同意义的字段，可以通过该字段连接多个表。
+
+查询结果叫笛卡尔集，查询结果总条目数是=表a的记录数 * 表b的记录数
+  select 字段名列表 from 表a，表b;
+  select 字段名列表 from 表a,表b where 条件;
+select t2.name,t2.uid,t3.* from t2,t3 where t2.uid = t3.uid;
+
+where子查询:嵌套查询
+	把内层查询结果作为外层查询的查询条件,可以是不同库里面查询
+select 字段名列表 from 表名 where 条件 (select 字段名列表 from 表名 where 条件);
+select name,age from user2 where age < (select avg(age) from user2);
+       select name from db3.user where
+    -> name in (select name from db4.t2);
+
+连接查询：
+	select 字段名列表 from 表a left join  表b on 条件表达式;
+	select 字段名列表 from 表a right join 表b on 条件表达式;
+#################################################################################
+常见的mysql管理工具：
+mysql 		命令行          跨平台		mysql官方bundle包自带
+MySQL-Workbench	图形		跨平台		mysql官方提供
+MySQL-Front		图形		Windows	开原，轻量级客户端软件
+phpMyAdmin		浏览器		跨平台		开原，需LAMP平台
+Navicat		图形		Windows	专业、功能大，商业版
+
+基本思路：	
+1.软件  httpd  mysql php php-mysql及相关包 phpMyAdmin...tar.gz
+      yum -y install httpd php-mysql php
+        启服务 httpd
+2.解压phpmyadmin包，部署到网站目录：
+	tar -xf phpMyAdmin..tar.gz -C /var/www/html
+	mv phpMyAdmin..languages   phpmyadmin
+	chown -R apache:apache phpmyadmin
+
+3.配置config.inc.php,指定mysql主机地址：
+	 cp phpmyadmin/config.sample.inc.php  phpmyadmin/config.inc.php
+配置文件 phpmyadmin/config.inc.php
+	$cfg['blowfish_secret']='提示符'
+	$cfg['servers'][$i]['host']='locahost'    #若该软件和mysql服务不在同一机子上就输IP地址
+4.创建授权用户：
+5.客户端：firefox 192.168.4.50/phpmyadmin
+
+修改密码：
+     mysqladmin -uroot -p“旧密码”  password "新密码"
+1.恢复mysql管理密码：
+	1.停止mysql服务
+	2.跳过授权表      /etc/my.cnf            #修改配置文件之前先停止mysqld服务
+		skip-grant-tables              #之前有密码策略要先注释掉才能启服务
+
+2.重设root密码： 
+	先启服mysql，进入mysql，库mysql
+	update mysql.user set authentication_string=password("123456")
+  	->where user="root" and host="localhost";
+       刷新  flush privileges;
+ #authentication_sting 是用户的加密文件
+
+3.把开始配置文件改回来 /etc/my.cnf 	
+####################################################################################
+
+授权：
+grant all on db4.user2 to webadmin@"192.168.4.254" identified by "123456";
+	#用户webadmin只能对库db4的表user2拥有所有权限
+grant all on *.* to root@"%" identified by "123456" with grant option;
+	#所有网络root用户对所以库和表拥有所有权限，并且其它root用户还可以给其它授权
+grant all on db3.* to admin@"localhost"  identified by "123456";
+	#本机admin用户只能对db3库拥有所有权限
+  grant select,update,insert(name,uid) on db4.user2 to admin@"192.168.4.%"
+->identified by "123456";
+ 
+客户端： mysql -h授权ip  -u用户  -p
+
+查看当前登入用户：
+	select user();
+显示用户的权限：
+	show grants;
+
+
+查处授权用户的权限：
+select host,user from mysql.user;
+show grants for webadmin@"192.168.4.%";
+
+查看授权权限：
+show grants for root@"%";
+撤销授权限：
+revoke insert,update.select on dbd.user2 from webadmin@"192.168.4.%";
+
+撤销其它root用户授权权限：
+revoke grant option on *.* from root@"%";
+
+删除授权用户：
+drop user root@"%";
+
+授权用户连接后修改密码：
+	set password=pssword("新密码");
+管理员重置授权用户连接密码：
+	set password for 用户名@'客户端地址'=password("新密码");
+
