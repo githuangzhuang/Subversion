@@ -45,8 +45,8 @@ show databases;                         #查看数据库的库
 ###############################################
 修改密码策略（root口令）
 1）show variables like “%password%”;            #查看全局变量
-   set global validate_password_policy=0;         #修改密码的复杂度，0只限制长度，1要求长度，数字，大小写和特殊字符；2，包括1的要求还有字典文件
-   set global validate_password_length=6;         #密码长度6位
+   set global validate_password_policy=0         #修改密码的复杂度，0只限制长度，1要求长度，数字，大小写和特殊字符；2，包括1的要求还有字典文件
+   set global validate_password_length=6         #密码长度6位
 修改完密码之后，退出mysql ，先停止mysql服务，在配置文件修改
 2）/etc/my.cnf  
    [mysqld]
