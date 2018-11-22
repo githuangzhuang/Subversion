@@ -1,0 +1,182 @@
+约束条件：
+null  	允许为空
+not null	不允许为空
+key		索引类型        普通索引、主健、外键、全文索引、唯一索引
+default	设置默认值，缺省为null
+
+create table t2(
+    -> name char(10) not null,
+    -> age tinyint not null default 25,
+    -> likes set("eat","sleep","game","sun") default "eat,sleep"
+    -> );
+
+insert into t2(name) values("tom");
+
+修改表结构：
+alter table t2                  #添加字段
+    -> add email varchar(30) default "stu@tedu.cn",
+    -> add tel char(11);
+
+ alter table t2                  #在表第一开头添加字段
+    -> add stu_num char(9) first;
+
+alter table t2                    #在name的字段后面添加字段  
+    -> add class char(9) default "nsd1808" after name;
+
+
+修改字段类型（不能与里面数据冲突）
+alter table 表名 modify 字段名 类型(宽度) 约束条件;
+alter table t2 modify stu_num varchar(10);
+alter table modify age tinyint default 18;
+
+alter table 表名 modify 字段名 类型(宽度) 约束条件 after 字段名;
+alter table t2 modify age tinyint default 25 atter name;
+
+alter table t2 modify likes set('eat','sleep','game','sun','it')
+    -> null default "it";      #枚举类型，已默认的不影响，只对对新插入的
+
+
+
+修改字段名：
+alter table 表名 change 原字段名 新字段名  类型   约束条件;
+alter table t2 change
+    -> email mail varchar(30) default "www.qq.com";
+
+删除字段：
+alter table 表名 drop 字段名;
+alter table t2 drop mail;
+alter table t2 drop mail,drop class;
+
+修改表名：
+alter table 表名 rename 新表名;
+alter table t1 rename t0;
+####################################################################
+键值类型：index：普通索引
+	   unique：唯一索引
+	   fulltext：全文索引
+	   primary key：主键
+	   foreign key：外键
+	   
+索引创建在表中的字段
+Btree    二叉树算法
+B+Ttree
+hash
+
+index普通索引：使用
+		一个表中可以有多个index字段
+		字段值可以重复，可以赋null值
+		经常把做查询条件字段设置index字段
+		index字段的key标志为是MUL
+优点：通过创建唯一性索引，可以保证数据库表中每一行数据的唯一性，可以加快数据的检索速度
+缺点：当对表中的数据进行增删改时，索引也要动态维护，降低了数据维护速度，索引需要占物理空间
+
+创建索引： create index 索引名 on 表名(字段);		一般索引名=字段名
+         create index name on t2(name);   
+
+查看索引信息； \G一个字段一行
+show index from t2\G;      
+
+删除索引：drop index 索引名 on 表名;
+	  drop index name on t2;      
+
+建表时创建索引:
+create table t3(
+    -> name char(10) not null,
+    -> age tinyint not null default 25,
+    -> index(nmae),index(age)
+    -> );
+########################################################################################
+primary key 主键：
+	一个表中只能有一个primary key 字段
+	对应的字段值不允许有重复，且不允许赋予null值（比如字段下面不能有相同的）
+	如果有多个字段都作为primary key,称为为复合主键，必须一起创建
+	主键字段的KEY标志时PRI
+	通常与auto_increment连用
+	经常把表中能够唯一表识记录的字段设置为主键字段(记录编号)
+	复合主键字段的值不能同时重复
+create table t4(
+    -> name char(5),
+    -> class char(7),
+    -> stu_num char(9),       
+    -> primary key(stu_num)
+    -> );
+或者  -> stu_num char(9) primary key);
+
+创建复合主键，复合主键字段的值不能同时重复
+create table t6(
+    -> clientip char(15),
+    -> serport smallint unsigned,
+    -> status enum("deny","allow")
+    -> primary key(clientip,serport)
+      -> );
+
+insert into t6 values("1.1.1.1","22","deny");
+
+insert into t6 values("1.1.1.1","21","allow");
+
+在已有表中创建主键：
+alter table t6 add primary key(serport,clientip);
+删除主键：
+alter table t6 drop primary key;
+
+与AUTO_INCREMEN连用，让字段的值自动增长，必须作为主键
+
+ create table t7(
+    -> id int primary key auto_increment,
+    -> name char(10),
+    -> age tinyint
+    -> );
+insert into t7(name,age) values("jack","15");
+insert into t7(name,age) values("jack","15");
+
++----+------+------+
+| id | name | age  |     #id值会自动增长
++----+------+------+
+|  1 | jack |   15 |
+|  2 | tom  |   17 |
+|  3 | lucy |   16 |
++----+------+------+
+
+删除自增长：（必须先删除自增长才能删主键）
+alter table t7 modify id int not null;
+
+foreign key 外键：
+	让当前表字段的值在另一个表中字段值的范围内选择
+使用外键的条件
+	表的存储引擎必须时innodb
+	字段类型要一致
+	被参照字段必须要时索引类型的一种（primary key）
+	
+##############################################################################
+创建外键：被参考的表引擎也必须是innodb
+create table yg(
+    -> yg_id int primary key auto_increment,
+    -> name char(10)
+    -> )engine=innodb;
+
+insert into yg(name) values("tom");
+
+创建外键：
+create table gz(
+    -> gz_id int(primary key),
+    -> pay float(7,2),
+    -> foreign key(gz_id) references yg(yg_id)
+    -> on update cascade on delete cascade
+    -> )engine=innodb;
+查看创建表信息：    
+show create table gz\G;
+
+insert into gz values(1,45000);        #外键插入信息，被参考的字段必须有
+
+同步删除：
+delete from yg where yg_id=1;
+
+同步更新：把编号为2的改为8
+update yg set yg_id=8 where yg_id=2;
+
+删除同步数据功能：
+show create table gz\G;          #先shouw，查看表名CONSTRAINT后面，gz_ibfk_1
+
+alter batle gz drop foreign key gz_ibfk_1;
+
+
