@@ -1,0 +1,177 @@
+数据备份
+物理备份：直接拷贝cp tar 
+逻辑备份：mysql 命令备份 存储在指定的文件
+数据备份策略
+完全备份：
+	备份所有数据
+增量备份：
+	备份上次备份后，所有新产生的数据
+差异备份：
+	备份完全备份后，所有新产生的数据（会重复）
+
+50物理备份：
+	cp -r /var/lib/mysql /root/mysqlall.bak
+	scp -r /root/mysqlall.bak 192.168.4.51:/root/
+51 物理恢复
+	systemctl stop mysqld
+ 	rm -rf /var/lib/mysql
+ 	cp -r /root/mysqlall.bak /var/lib/mysql
+   	chown -R mysql:mysql /var/lib/mysql
+    	systemctl start mysqld 
+    	mysql -uroot -p123456
+版本要一致 不适合innodb引擎的表 而且单个库备份备份不会备份日志文件
+   
+
+逻辑备份
+备份操作
+]# mysqldump -uroot -p密码  库名  > 路径/xxx.sql
+恢复操作
+mysql -uroot -p密码 库名 < 路径/xxx.sql
+库名表示方式
+-A 或 --all-databases  所有库
+数据库名                   单个库
+数据库名 表名             单个表
+-B 数据库1  数据库2      多个库
+注意事项
+
+备份
+]# mysqldump -uroot -p123456 -A > /mydata/mysqlall.sql
+]# ls /mydata/
+]# mysqldump -uroot -p123456 db4 > /mydata/db4.sql
+】#mysqldump -uroot -p123456 db4 t2 > /mydata/db4_t2.sql 
+】#mysqldump -uroot -p123456 -B db2 db3 > /mydata/two.sql
+恢复
+]#mysql -uroot -p123456 db4 <  /mydata/db4.sql   恢复db4中所有表
+mysql -uroot -p123456 db4 < /mydata/db4_t2.sql  恢复t2表
+恢复库中表，先要创建库 
+
+
+实时增量备份/恢复
+
+1启用binlog日志实现数据时时增量备份与数据恢复
+掌握binlog日志的
+binlog日志简介 记录所有更改数据的操作
+查看日志记录格式
+show variables like “binlog_format";
+
+启用binlog日志：
+配置文件	vim /etc/my.cnf
+		log_bin=/logdir/plj			#修改binlog日志的目录logdir和名plj
+		server_id=50		  #表识机器，不能有重复,范围 1～255,一般主机位表识
+		binlog_format="mixed";			#日志格式
+
+mkdir /logdir
+chown mysql /logdir 
+systemctl restart mysqld
+ls /logfir/plj.*
+/logdir/plj.000001  /logdir/plj.index 日志文件  日志索引文件
+查看日志文件信息,日志文件满500M就会生成一个新的文件
+~]# mysqlbinlog /logdir/plj.000001 
+]# mysqlbinlog /logdir/plj.000001  | grep -i insert 
+
+mysql -uroot -p密码  -e 'SQL命令'
+msyql -uroot -p密码  --flush-logs db4 > /root/db4.sql      #备份完生成一个新的日志文件
+
+删除binlog指定之前的日志：
+	>purge master logs to "binlog文件名";
+重建新日志：
+	reset master;
+
+显示当前正在使用的日志文件
+	show master status;
+############################################################################################
+
+利用binlog恢复数据：
+	mysqlbinlog  选项   binglong日志文件 | mysql -uroot -p密码
+常用选项  --start-datetime="年月日 时间" --stop-datetime="年月日 时间"
+        --start-position=数字 --stop-position=数字
+#查看日志文件信息，可以查看到时间和数字   at 数字；下面是时间，结束是在commit的下面at时间
+
+1.先完全备份数据，再执行binglog日志记录的sql命令恢复数据
+终端：  mysql -uroot -p密码  库名 < /root/t1.sql
+   mysqlbinlog --start-position=1456 --stop-position=1500 /logdir/plj.000001 | mysql -uroot -p密码
+
+2安装第3方软件提供的innobackupex命令实现数据的增量备份与恢复
+1.XtranBackup 2.innobackupex 备份工具
+依赖包libev..rpm;perl-DBD-mysql; perl-Digest-MD5;
+    软件  percona-xtrabackup..rpm
+
+innobackupex
+要求库里是空的,清空库时mysql、performance_schema、sys这三个库也要备份，恢复这三个库也要恢复    
+innobackupex基本选项：
+	--host		主机名
+	--user		用户名
+	--port		端口号
+	--password		密码
+	--databases		数据库名
+	--no-timestamp	不用日期命名备份存储的子目录
+  
+终端备份数据：
+	innobackupex --user root --password 123456  /allbak  --no-timestamp
+           #不加库名是默认全部备份， --databases="库名"，/allbak 备份目录自动生成
+	   备份目录下有：备份数据  备份数据时的备份信息
+
+	--redo-only				日志合并
+	--apply-log				准备还原
+	--copy-back				恢复数据
+	--incremental 目录名		增量备份
+	--incremental-basedir=目录名	增量备份时，指定上一次备份数据存储的目录名
+	--incremental-dir=目录名		准备恢复数据时，指定增量备份数据存储的目录名
+	--export				导出表信息
+	  import				导入表空间
+恢复数据：
+1.准备恢复数剧：	innobackupex --user root --password 123456 --apply-log /allbak
+2.停止数据库服务	      systemctl stop mysqld
+3.清空数据库目录：	rm -rf /var/lib/mysql/*
+4.恢复数据：	       innobackupex --user root --password 123456  --copy-back /allbak
+5.修改数据库目录的所有者和组为mysql：	chown -R mysql:mysql /var/lib/mysql
+6.启服：		systemctl start mysqld
+	
+增量备份：
+	innobackupex --user root --password 密码 --incremental 新目录 --incremental-basedir=上备份的目录 --no-timestamp
+
+增量恢复
+1.准备恢复数据
+2.合并日志文件
+3.把备份目录下数据拷贝到数据库目录下
+4.修改数据库目录的所有者和组用为mysql
+5.启动数据库服务
+	  systemctl stop mysql
+	  rm -rf /var/lib/mysql/*
+	1.innobackupex --apply-log --redo-only /allbak
+	2.innobackupex --apply-log --redo-only /allbak --incremental-dir=/new1
+	3.innobackupex --copy-back /allbak
+	4.chown -R mysql.mysql /var/lib/mysql
+	5.systemctl start mysqld
+#数据放在 .exp    表空间 .ibd   表结构 .frm   字典文件 .cfg          
+
+恢复备份文件单个表：
+1.导出表信息
+2.创建一个和原来类型一样的空表
+3.删除表空间文件
+4.把导出的表信息文件拷贝到数据库目录下的库名下
+5.修改刚导出文件的所有者和组为msyql
+6.导入表空间
+	1.innobackupex --user root --password 123456 --apply-log --export /db4bak
+	2.create table b (name char (10));
+	3.alter table b discard tablespace;
+	4.cp /db4bak/db4/b.{cfg,exp,ibd}  /var/lib/mysql/db4/
+	5.chown -R mysql:mysql /var/lib/mysql/db4/
+	6.alter table b import tablespace;
+	  system rm -rf /var/lib/mysql/db4/b.cfg
+	  system rm -rf /var/lib/mysql/db4/b.exp
+综合：
+网页注册信息导入到数据库
+1.准备数据库服务器
+	创建新库gamedb,表名regtab
+	表字段结构和程序员协商好 name password
+	给web服务器授权select,insert权限
+2.web服务器，部署LAMP环境
+	httpd  ph  php-mysql mariadb mariadb-server
+	程序员给代码部署index.html和regtab的页面
+
+	1.create database gamedb;
+	2.create table regtab values(name char(10),password(6));
+	3.grant select,insert on gamedb.regtab.* to userweb@"web服务器IP" identified by "密码";
+
+	
