@@ -1,0 +1,81 @@
+iscsi提供FTP共享服务
+配置iscsi服务
+web主机安装软件----vsftpd
+
+mkdir /var/ftp
+mount /dev/sda1  /var/ftp
+
+配置文件 /etc/vsftpd/vsftpd.conf
+sed -i 's/#anon/anon/' /etc/vsftpd/vsftpd.conf
+#开启匿名上传功能
+
+chmod 777 /var/ftp/pub
+启服 vsftpd
+
+Multipath多路径
+同网段，两个ip都能发现后端储存sda和sdb
+软件---->device-mapper-multipath;
+利用yum list | grep multipath 
+生成配置文件 cp /usr/share/doc/device-mapper-multipath../multipath.com  /etc/
+ 
+声明发现多路径 /etc/multipath.conf
+defaults {
+	user_friendly_names yes
+	find_multipaths yes
+}
+multipaths {
+	multipath {
+	wwid “ ”         #通过下面方法获得wwid号 
+	alias mpatha     #取别名
+}
+
+获取wwid:
+/usr/lib/udev/scsi_id --whitelisted --device=/dev/sdb
+
+启服  multipath
+设置成功会在 /dev/mapper 下生成mpatha文件
+查看效果 multipath -rr
+
+编写udev规则
+udevadm monitor  --property  #加载USB查看设备属性
+已经加载利用下面查看属性
+udevadm info --query=path --name=/dev/sda
+udevadm info --query=property --path=/block/sda
+udevadm info --query=all --altribute-walk --path=/block/sda
+
+udevadm info --query=property --path=/block/sdada	
+#单独查看某个磁盘分区属性
+
+编写udev规则文件，根据
+udevadm info --query=property --path=/block/sdb/sdb1
+自定义文件 /etc/udev/rules.d/70-usb.rules #后缀 .rules
+ACTION=="add",ENV{ID_VENDOR}=="生产商",ENV{ID_SERIAL_SHORT}=="id号",SYMLINK="取名$n",RUN+="绝对路径"
+
+
+NFS共享,将/root和/usr/src,共享
+软件 nfs-utils rpcbind
+配置文件 /etc/exports
+/root  192.168.4.100(rw,no_root_squash)
+/usr/src  网段/24(ro)
+
+启服 nfs rpcbind
+客户端：
+1.创建挂载点 /root2
+2.永久自动挂载 /etc/fstab
+192.168.4.100:/root /root2 nfs default 0 0
+192.168.4.100:/usr/src /nfsdir nfs default,ro 0 0  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
