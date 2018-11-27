@@ -86,7 +86,10 @@
 	select * from user where name not in ("root");
 
 29  统计username 字段有多少条记录
-	select count(*) from user where username=username-(username="");
+select count(username) from user;
+
+29.统计comment不为空的
+	select count(*) from user where comment=comment-(comment="");
 
 30  显示名字里含字母c  用户的详细信息
 	select * from user where name like "%c%";
