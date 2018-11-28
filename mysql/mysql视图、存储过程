@@ -1,0 +1,265 @@
+视图的优点：
+使用限制：
+语法格式：	
+	create view 视图名称 as sql查询
+	create view 视图名称(字段名列表) as sql查询
+	create view t11 as select name,host from user;
+	create view v2 as select name,shell from user where shell="/bin/bash";
+
+删除视图表：
+	drop view 视图名;
+	de
+查看当前库下所有表的状态信息：
+	show table status\G;
+	show table status where comment="view"\G;
+表信息最后comment:view 是为视图表
+
+查看创建视图命令：
+show create view 视图名;
+
+视图和基表的增删改都会影响跟着改变
+
+若t1表和t2表中有相同字段表的需要给视图写字段名：
+	create view tt(a,b,c) as from t1,t2 where t1.name=t2.name;
+
+设置字段别名：as也可以去掉
+	select 源字段名 as 别名 left join 源字段名 别名 on a.uid=b.uid;
+	create view as select t1.name as aname,t2.name as bname from t1,t2 where t1.name=t2.name;
+#######################################################################################
+
+local 仅检查当前视图的限制,with local check option 视表数据改变，基表不会变
+cascaded 同时要满足基表的限制（默认） with check option
+
+要有个字段赋予条件限制；uid字段值就不能修改小于5的值，要满足于自身限制,uid>=5
+    create view v2 as select * from v1 where uid >=5 with local check option;
+ 
+#####################################################################################
+
+1.创建存储过程：必须在库里面
+	delimiter //       把；改为//结尾
+	create procedure 名称() begin ...功能代码 end //
+	delimiter;		把 ; 改回来
+
+	create procedure p1()
+	 begin 
+	select * from user3; create table if not exists user10(id int); 
+	end//
+
+2.调用存储过程：
+	call 存储过程名();
+
+create table if not exists db9.a(id int);          当库里已经有表a时，将不会报错
+
+3.查看存储过程：
+select db,name,type from mysql.proc where name="存储过程名";
+select name,body from mysql.proc where name="p1"\G;
+
+删除存储过程：
+	drop procedure 存储过程名;
+###################################################################################33
+
+变量类型：
+1.会话变量  只会影响到当前的会话
+2.全局变量
+3.用户变量 客户端连接数据库服务整个过程有效，断开变量失效
+4.局部变量 只对于存储过程begin/end中有效，语句执行完，变量失效
+
+	1.show session variables like "%time%";
+        set session sort_buffer_size
+
+	2.show variables like "%connect%";
+	  set @@hostname
+	3.set @x=9;		定义变量
+	  select @x;   输出变量值
+	
+	4.delimiter //
+	  create procedure p1()
+	  begin
+	  declare x int;
+	  set x=9;
+	  select x;
+	  end //
+	  delimiter ;
+	
+查询结果赋值定义变量	select name into @x from user where id=1;
+	delimiter //
+     create procedure p2()           
+     begin
+     declare y int default 1;				  declare 定义变量必须连续
+     declare x int;
+     set x = 10
+     select y;
+     select x
+     select count(id) into y from user;
+     select y;
+     end //
+	delimiter ;
+	call p2;
+
+调用参数： in  输入参数，给存储过程传值
+	  delimiter //
+	create procedure p4(in username char(30))
+	begin
+      declare x int default 0;
+      select count(name) into x from user where shell=username;
+      select x;
+      end //
+	  delimiter ;
+	call p2("/bin/bash");
+
+out类型：输出参数
+	delimiter //
+	create procedure p5(in shellname char(30),out number int)
+	begin
+	select count(name) into number from user where shell=shellname;
+	select number;
+	end //
+	  delimiter ;
+	call p5("/bin/bash",@a);
+        调用必须要输入两个参数，第二参数@a可以是任意个参数用来站位
+
+inout类型：输入/输出参数
+	delimiter //
+	create procedure p7(inout x char(30))
+	begin
+	select x;
+	select name into x from user where id=1;
+	select x;
+	end //
+	  delimiter ;
+	call p7(@a);
+	调用必须输入个任意参数
+
+算数运算：
+	set @a=10 div 3;select @a; 	取整
+	set @a=10%3;select @a;		含小数
+	set @a=10/3;select @a;		取余
+	
+	delimiter //
+	create procedure p9(in bash char(30), in nologin char(30))
+	begin
+	declare x int;
+	declare y int;
+	declare z int;
+	set x=0;
+	set y=0;
+	select count(name) into x from user where shell=bash;
+	select count(name) into y from user where shell=nologin;
+	set z= x + y;
+	select z;
+	end //
+	  delimiter ;
+	call p9("/bin/bash","/sbin/nologin/");
+
+if 条件测试 then
+	代码
+end if；
+
+	delimiter //
+	create procedure p1(in num int)
+	begin
+	if 1=num then
+	select * from user where id=1;
+	else
+	select * from user where id=2;
+	end if;
+	 end //
+	delimiter ;
+	call p1(1);  call p1(2);
+
+while 条件判断 do
+  循环体
+  end while;
+
+	delimiter //
+	create procedure p1()
+	begin
+	declare x int default 1;
+	while x<=5 do
+	select * from user where id=1;
+	set x=x+1;
+	end while;
+	end //
+	 delimiter ;
+	call p1;
+
+loop死循环体
+ loop
+    循环体
+  end loop;
+
+	delimiter //
+	create procedure p2()
+	begin
+	declare x int default 1;
+	loop
+	  select x;
+	end loop;
+	end //
+	delimiter ;
+	  call p2;
+
+repeat
+  循环体
+    until 条件判断,成立结束
+end repeat;
+	 delimiter //
+	create procedure p4()
+	begin
+	declare x int default 1;
+	repeat
+	select * from user  where id=1;
+	set x = x + 1;
+	until x>=3;
+	end repeat;
+	end //
+	delimiter ;
+	  call p4;	
+
+
+控制循环执行：
+ leave  标签名  结束循环
+iterate 标签名  结束当前循环
+	delimiter //
+	create procedure p1()
+	begin
+	declare i int;
+	loab1:loop
+	select i;
+	set i = i + 1;
+	if i=3 then
+	  iterate loab1;
+	end if;
+	if i=7 then
+	   leave loab1;
+	end if;
+	end loop;
+	end //
+	  delimiter ;
+	call p1;
+
+统计uid是偶数的个数
+	  delimiter //
+	create procedure p1()
+	begin
+	declare sum int;
+	declare x int;
+	declare i int;
+	declare y int;
+	set i = 0;
+	set y = 0;
+	set x = 1;
+	select count(uid) into sum from user; 
+	while x <= sum do
+	select uid into i from user where id=x;
+	if i % 2 = 0 then
+	set y = y + 1;
+	end if;
+	set x = x + 1;	
+	end while;
+	select y;
+	end //
+	  delimiter ;
+	  call p1;
+
+
