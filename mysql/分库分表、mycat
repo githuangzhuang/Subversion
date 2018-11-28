@@ -1,0 +1,77 @@
+分库分表：将存放在一个数据库（主机）中的数据，按照特定方式进行拆分，分散存放到多个数库（主机）中，达到分散单台设备负载的效果
+
+垂直分割：按表的业务类型
+横向分割：按表的字段类型
+
+1.mycat是java的分布式数据库系统中间层，为高并发环境的提供解决方案，开原软件
+2.支持JDBC形式连接，支持mysql,oracle,sqlserver.mongodb等
+3.提供数据读写分离服务
+4.实现数据库服务器的高可用
+5.提供数据分片服务
+6.适合数据大量写入数据的存储需求
+查看： java -version
+
+分片规则：
+1.枚举法	sharding-by-intfile
+2.固定分片	rule1
+3.范围约定	auto-sharding-long
+4.求模i法	mod-long
+5.日期列分区法	sharding-by-date
+6.通配取模	sharding-by-pattern
+7.ASCII码求模通配	sharding-by-prefixpattern
+8.编程指定	sharding-by-substring
+9.字符串拆分hash解析		sharding-by-stringhash
+10一致性hash		sharding-by-murmur
+
+mycat进行数据库的分库分表：
+1.装包Mycat-server-1.4-beta-..linux.tar.gz	
+	mv mycat /usr/local
+2.修改配置文件
+	vim mycat/conf/server.xml
+	<user name="admin">	用户名				
+	<property name="password">123456</property>	密码
+	<property name="schemas">TESTDB</property>		虚拟库名，可以不用改
+
+	<property name="readOnly">true</property>         只有看的权限
+
+vim mycat/conf/schema.xml
+	<schema name="TESTDB"		与server.xml 虚拟库名一致
+
+1).修改7.11.12.15.20.22行 dataNode= 数据库服务器，有机台写机台
+			dataNode="dn1,dn2"		
+
+2).修改37.38行 dataHost=主机名,database=库名db1；数据库必须有写的库名，多余的注释掉
+	<dataNode name="dn1" dataHost="mysql54" database="db1" />       
+	<dataNode name="dn2" dataHost="mysql55" database="db2" />
+	<!-- <dataNode name="dn3" dataHost="localhost1" database="db3" /> -->  
+
+3).修改43～48name=主机名,url=服务器ip，user=授权用户和密码
+          <dataHost name="mysql54" .....
+	    <writeHost host="hostM1" url="192.168.4.54:3306" user="yaya" password="123aaa...A">
+	    </dataHost>
+
+4).有机台服务器就写几行，复制43-48行，修改好，注意不要写在其它服务器的<dataHost>里面
+			
+3.修改服务器54.55配置
+	vim /etc/my.cnf
+	lower_case_table_names = 1
+4.服务器54.55都要授权用户
+	grant all on *.* to yaya@"%" identified by "密码";
+5.启服务
+	/usr/local/mycat/bin/mycat start
+	netstat -anputl | grep :8066
+
+客户端验证：
+	
+	mysql -hmycat服务器ip -uadmin -p密码 -P8066
+	
+   
+   必须建配置文件中的表且用的是枚举法字段中必须要有字段 sharding_id，字段值只能是代表54/55的值，可以在
+mycat/conf/	partition-hash-int.txt 中查看
+  不同的算法建立的字段名不同，像sharding_id ,可以在mycat/conf/rule.xml查看
+
+插入必须要有列表：
+	insert into employee(id,name,sharding_id) values(4,"lili",10000);
+	
+删除用户权限：drop user yaya@"%";
+
