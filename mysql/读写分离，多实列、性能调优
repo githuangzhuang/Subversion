@@ -1,0 +1,194 @@
+读写分离介绍：把客户端访问数据的查询访问和写入数据的访问分别给不同数据库服务器处理
+maxscal 官方下载地址： https://downloads.mariadb.com/files/MaxScale
+查看软件管理命令：max(双tab)
+
+1.部署mysql 一主一从，同步结构，A、B
+2.部署数据读写分离服务器   C
+2.1 装包
+  修改配置文件
+3. 在主服务器根据配置设置添加对应的用户   
+4. 启动读写分离服务
+5. 客户端验证数据读写分离服务
+	
+	1.rpm -ivh maxscal...rpm
+	
+	2. cp /etc/maxscal.cnf{,.bak}
+	   vim /etc/maxscal.cnf
+		threads=auto                    根据系统cpu核数配置多少线程数
+		   ....
+		[server1]				指定数据库服务器的ip
+		type=server
+		address=主服务器ip
+		port=3306
+		protocol=MySQLBackend
+		
+		[server2]				复制上面修改ip
+		   .....
+		address=从服务器ip
+		   .....
+
+		[MySQL Monitor]			定义监视的数据库服务器
+		   ...
+		servers=server1, server2
+		user=监视授权用户名			主服务器授权用户			
+		passwd=密码
+		
+		#[Read-Only Service]		只允许某台服务器查看注释掉
+		#type=service
+		#router=readconnroute
+		#servers=server1
+		#user=myuser
+		#passwd=mypwd
+		#router_options=slave
+
+		[Read-Write Service]		定义读写分离服务
+		servers=server1, server2
+		user=验证授权用户
+		passwd=密码
+
+		#[Read-Only Listener]		只允许某台服务器监听注释掉
+		#type=listener
+		#service=Read-Only Service
+		#protocol=MySQLClient
+		#port=4006
+
+		[MaxAdmin Listener]      	定义管理服务定义的端口号
+		...
+		port=4026
+
+		3.grant replication slave,replication client on *.* to myuser@'%' identified by "123456";
+		  grant select on mysql.* to 验证授权用户@'%' identified by "123456";
+
+		4. maxscale -f /etc/maxscale.cnf
+		   netstat -anputl | grep maxscale
+		   kiallall -9 maxscale     停止服务    
+		   maxadmin -uadmin -pmariadb -P4026          进入maxscale服务
+			list servers        查看服务
+
+		5.mysql -h192.168.4.57  -P4006 -uyaya -p123456
+
+
+多实列配置
+1.安装支持多实列服务的软件包
+2.修改主配置文件，把原来的/etc/my.cnf移走，重新写配置
+3.初始化授权库
+4.启动服务
+5.客户端访问测试
+	1.yum -y install gcc gcc-c++
+	  tar -xf mysql-5.7.20...tar
+
+	2.vim /etc/my.c
+	[mysqld_multi]
+	mysqld = /usr/local/mysql/bin/mysqld_safe
+	mysqldadmin = /usr/local/mysql/bin/mysqladmin
+	user = root
+	
+	[mysqld1]
+	datadir=/data3307
+	port=3307
+	log-error=/data3307/mysqld3307.log
+	pid-file=/data3307/mysqld3307.pid
+	socket=/data3307/mysqld3307.socket
+
+	[mysqld2]
+	datadir=/data3308
+	port=3308
+	log-error=/data3308/mysqld3308.log
+	pid-file=/data3308/mysqld3308.pid
+	socket=/data3308/mysqld3308.socket
+
+创建目录定义好的目录：
+	mkdir /data3307 /data3308
+
+	3.usr/local/mysql/bin/mysqld_multi start 1
+使用初始密码登入：
+	/usr/local/mysql/bin/mysql -uroot -p原始密码 -S /data3307/mysql3307.socket
+修改密码：
+	alter user root@localhost identified by "新密码";
+
+第二台初始化：
+	usr/local/mysql/bin/mysqld_multi start 2
+
+把之前的/bin/mysql删掉，重新建软连接
+	ln -s /usr/local/mysql/bin/mysql /bin 
+
+排错解决：
+	删除目录，重新创建，killall -9 进程，再初始化
+
+################################################################################################
+mysql调优思路：
+1.升级硬件			cpu、内存、硬盘
+2.加大网络带宽		付费加大带宽
+3.调整mysql服务运行参数	并发连接数、连接超时时间、重复使用的线程数
+4.调整与查询相关的参数	查询缓存、索引缓存
+5.启用慢查询日记		slow-query-log
+6.网络架构不合理		调整网络架构
+
+	1.uptime 查看在线时间天数，多少用户登入，负载量
+	  free -m 查看使用了多少内存，剩余多少内存
+	  iostat 分析IO性能
+
+	2.ifconfig eth0		查看网络带宽
+
+	3.并发及连接控制
+	  max_connections		允许的最大并发连接数
+	  connect_timeout		等待连接超时，默认10秒，仅登入时有效
+	  wait_timeout		等待关闭连接不活动超时，默认28800秒(8小时),一般不用再去设置
+重点： max_connections 
+      max_user_connections	查看以前最大并发连接
+
+show variables like "%conn%";
+set global max_connections=300;  临时的        
+永久写入到配置文件 max_connections=300            
+Max_used_connections/max_connections*100%=85%  最大并发连接占设置的最大连接数85%左右为宜，小于10%最大连接数设置过高
+###################################################################################################33
+show global variables;  查看全局变量
+show status;	查看状态
+
+客户端与服务器建立连接超时间
+show variables like "%timeout";
+       connect_timeout      默认值10，不宜太大也不适宜太小
+
+wait_timeout   默认是28800妙（8小时） 等待客户操作命令时间，防止写入数据没有写完就断开连接，比较长
+
+show processlist;  显示当前连接的用户程序列表，访问的什么库，做了什么命令
+
+########################################################################################################
+
+	4.show variables like "%buffer%";
+	  key_buffer_size		用于myisam引擎的关键索引缓存大小，后面单位是字节，索引缓冲空间，查询快点        
+	  sort_buffer_size	为每个要排序的线程分配此大小的缓存空间
+ 	  read_buffer_size和read_rnd_buffer_size 	为顺序读取表记录保留的缓存大小,影响sql查询的响应速度
+	  thread_cache_size	允许保存在缓存中被重用的线程数量
+	  table_open_cache	为所有线程缓存的打开的表的数量
+
+重点：key_buffer_size	
+
+	 show variables like "query_cache%";
+
+query_cache_type=0/1/2	查询缓冲是否启动，0是关，1是没有超出查询的限制，2是每次查询时都要放入查询缓冲里
+query_cache_limit		查询缓冲的限制是多少大，超过了就不能放到查询缓冲里
+query_cache_wlock_invalidate	查询缓冲的写锁，对myisam存储引擎有效，等修改完内容后再查查询给客户端
+
+show global status like "qcache%";
+Qcache_hits     +1			查询是在查询缓冲里查到的值就加 1
+Qcache_inserts  +1		数据库服务器每接受一次查询请求值就加 1
+
+Qcache_hits/Qcache_inserts 值越大，证明设置的查询缓冲越好，每次都是从查询缓冲里查到的
+###############################################################################################################3
+
+查询日记
+慢查询日记     记录耗时较长，或不使用索引的查询操作
+开启查询日记和慢查询日记
+vim /etc/my.cnf
+  general-log          			不写就是系统默认的路径和文件名=主机名.log
+  general-log-file=路径/文件名		tailf mysql55.log  时时监控记录信息
+  long-query-log				文件名：主机名-slow.log，默认是10s
+
+慢查询统计命令输出到文件给程序员优化写的查询比较复杂的，比如使用过多的多表查询或嵌套查询
+mysqldumpslow mysql55-slow.log > /tmp/sql.txt
+
+
+
+
+
