@@ -1,0 +1,146 @@
+主流RDBMS（关系型数据库）服务软件
+Oracle
+DB2
+SQL Server
+MySQL
+
+主流NoSQL服务软件
+Redis  开源
+MongoDB
+Memcached
+CouchDB
+
+redis:分布式内存数据库，支持数据持久化，也支持list、hash、set、zset数据类型，支持主从同步。
+
+部署redis服务
+1.装包，是源码安装，依耐gcc
+2.初始化配置
+3.查看服务运行状态
+4.连接服务,默认是本机
+5.存储数据
+	1.yum -y install gcc
+	  tar -xf redis-4.0.8.tar.gz
+	  cd redis-4.0.8
+	  make && make install
+	2. ./utils/install_server.sh    一路回车默认
+	3.netstat -anputl | grep redis
+	  /etc/init.d/redis_6379 stop/redis-cli shutdown	停止服务
+	  /etc/init.d/redis_6379 start		开启服务
+	  /etc/init.d/redis_6379 status	查看服务状态
+	4.redis-cli
+	  redis-cli -h ip地址  -p 端口
+	5.set name tom	存数据
+	  get name		查看数据
+
+默认是0～15个库，编码是0～15
+select 1	切换库
+keys * 	打印所有变量
+keys ??	打印出两个字符的变量
+keys age	打印指定变量
+EXISTS 变量  查看变量存不存在
+ttl 变量      -1 是永不过期,1 是有效期，2是过期的
+expire 变量 20	给变量设置有效期，单位默认是秒，过期自动删除
+del 变量	删除变量
+move 变量 2	移动变量到2库
+flushdb	清除当前库的数据
+flushall	清除内存所有数据，慎重
+save		保存所有数据
+shutdown	停止服务
+type 变量	查看类型,tring是字符类型
+hset或lset	不同类型存储
+/var/lib/redis/6379/dump.rdb  默认存储的文件
+
+vim /etc/redis/6379.conf
+ port 6350
+ bind 192.168.4.50 127.0.0.1
+  redis-cli -h 192.168.4.50 -p 6350
+  redis-cli -h 192.168.4.50 -p 6350 shutdown     
+   /etc/init.d/redis_6379 start
+
+设置连接密码
+vim /etc/redis/6379.conf
+	requirepass 123456
+
+修改脚本使其可以使用脚本停止服务
+vim /etc/init.d/redis_6379
+	$CLIEXEC -h 192.168.4.50 -p 6350 -a 123456 shutdown
+
+	redis-cli -h 192.168.4.50 -p 6350 -a 123456
+若一开始没有用密码登入在服务端可以用：  auth 密码
+
+排错：
+若启服务时无法启服，且出现“/var/run/redis_6379.pid exists“，需要
+rm -rf /var/run/redis_6379.pid 才可以启服
+#######################################################################################
+清理内存管理策略：vim /etc/redis/6379.conf
+volatile-lru	最近最少使用（针对设置了TTL的key)
+allkeys-lru		删除最少使用的key
+volatile-random	在设置了TTL的key里随机移除
+allkeys-random	随机移除key
+volatile-ttl(minor TTL)	移除最近过期的key
+noeviction		不删除，写满时报错
+选项默认设置：
+maxmemory <bytes>		最大内存
+maxmemory-policy noeviction	定义使用策略，根据在上面选择策略
+maxmemory-samples 5	选取模版数据的个数，越多越精准（针对lru和ttl策略）
+
+tcp-backlog 511	tcp连接总数，若连接比较慢可以把值改小点
+tcp-keepalive 300	长连接时间单位秒
+maxclients 10000	并发连接数量
+
+###################################################################################
+
+部署lnmp+redis服务
+停掉mysqld服务,若把数据时存在其它服务器上，本机就不用安装redis服务，在/usr/local/nginx/html/redis.php 脚本里确定是把数据存在娜个服务器上
+1.部署软件
+nginx-1.12.2.tar.gz
+php-devel-5.4.16-42.el7.x86_64.rpm
+php-fpm-5.4.16-42.el7.x86_64.rpm
+
+1.安装nginx服务
+yum -y install gcc pcre-devel zlib-devel 
+tar -xf nginx-1.12.2.tar.gz
+cd nginx-1.12.2/
+./configure && make && make install
+/usr/local/nginx/sbin/ngins
+
+2.安装php服务
+yum -y install php-fpm-5.4.16-42.el7.x86_64.rpm
+yum -y install php
+yum -y install php-common
+systemctl start php-fpm
+
+3.部署php页面：
+vim /usr/local/nginx/html/b.php
+
+4.修改配置文件php页面的
+vim /usr/local/nginx/conf/nginx.conf
+
+5.部署redis测试页面
+vim /usr/local/nginx/html/redis.php
+	
+6.配置php支持redis
+yum -y install autoconf automake
+yum -y install php-devel-5.4.16-42.el7.x86_64.rpm
+tar -xf php-redis-2.2.4.tar.gz
+cd phpredis-2.2.4/
+/usr/bin/phpize
+./configure --with-php-config=/usr/bin/php-config
+make && make install
+
+7.修改配置文件
+	vim /etc/php.ini
+728. extension_dir = "/usr/lib64/php/modules/"	模块目录
+730. extension = "redis.so"			模块名
+
+8.启服务
+systemctl restart php-fpm
+php -m | grep redis
+
+9.客户端测试
+	firefox  http://192.168.4.56/redis.php
+
+10.查看存储redis服务器是否有数据
+
+
+
