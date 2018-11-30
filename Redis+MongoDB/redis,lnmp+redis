@@ -47,7 +47,19 @@ flushall	清除内存所有数据，慎重
 save		保存所有数据
 shutdown	停止服务
 type 变量	查看类型,tring是字符类型
-hset或lset	不同类型存储
+
+lset或hset	不同类型存储                                     http://redisdoc.com/ 参考
+RPUSH mylist "hello"     开始第一个hello值不存储
+RPUSH mylist "hello"     从第二个值开始存储
+RPUSH mylist "foo"
+LSET mylist "word"
+LRANGE mylist 0 -1       查看变量存储的值,0表示第一个数，-1是最后一个
+LRANGE mylist 0 1        1表示第二个数
+
+HSET people jack "jack spare"     jack是“区域”，下面有“jack spare”
+HSET people gump "fro gump"        变量是 people
+HGETALL peope
+
 /var/lib/redis/6379/dump.rdb  默认存储的文件
 
 vim /etc/redis/6379.conf
