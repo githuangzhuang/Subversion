@@ -1,0 +1,91 @@
+1.配号redis服务
+vim /etc/redis/6379.conf
+bind 本机ip					127.0.0.1 不添加
+cluster-enabled yes			启用集群
+cluster-config-file nodes-xxx.conf	指定集群信息文件，不允许相同
+cluster-node-timeout 5000		请求超时5秒，单位是毫秒
+
+2.在管理主机准备 ruby rubygems ruby-devel-2.0.0.648-30.el7.x86_64.rpm  redis-3.2.1.gem
+
+yum -y install ruby rubygems
+rpm -ivh --nodeps ruby-devel-2.0.0.648-30.el7.x86_64.rpm
+gem install redis-3.2.1.gem
+cd redis-4.0.8/
+cd src
+mkdir /root/bin
+cp redis-trib.rb  /root/bin		做成系统命令
+
+3.管理服务器创建集群:
+redis-trib.rb create --replicas 1
+ 192.168.4.52:6352  192.168.4.53:6353 .....					 replicas 1  指定从库几台，至少三台主库,实现高可用
+
+
+查看集群信息				查看集群节点
+>cluster into			>cluster nodes
+
+
+若出现有数据已经分配出去查看数据库目录下面的信息文件 nodes-xxx.conf
+/var/lib/redis/6379	数据库目录
+若节点有数据分配，把目录下面的都删除掉，再重启服务
+
+
+redis-trib.rb check 192.168.4.51:6351	在管理主库上检测集群信息
+
+客户端测试：可以连接主库任意一台,-c 连接集群
+redis-cli -c -h 192.168.4.51 -p 6351                
+
+存数据时hash值在哪台主库的hash槽范围内，就存在哪台主库上
+从库不能查看到变量的值和存数据的，只能在主库上查看，任意一台主库可以查看到变量的值
+
+当主库宕机了，其对应的从库就升级为主库
+#################################################################################33
+
+1.添加主库：57
+	redis-trib.rb add-node 192.168.4.57:6357 管理主机ip：端口
+2.检测：
+	redis-trib.rb  check 192.168.4.52:6352
+3.重新分片：
+	redis-trib.rb reshard 192.168.4.57:6357
+					hash槽个数		
+What is the receiving node ID?  添加主库ID		
+Source node #1:all      		//从当前所有的主里面获取hash槽
+
+添加从库：
+      redis-trib.rb add-node --slave 192.168.4.59:6359 192.168.4.52:6352
+
+若添加失败，显示is not empty ，把/var/lib/redis/6379下面的删掉，重启不了就初始化
+####################################################################################
+
+把集群主机还原为独立的主机
+移除slave 主机：
+redis-trib.rb del-node 192.168.4.51:6351 主机ID值
+
+redis-cli -h ip  -p 端口
+cluster reset 			
+
+1.停止服务
+2.注释掉启用集群配置项
+3.cd /var/lib/redis/6379
+	rm -rf nodes-xx.conf
+4.重启服务
+
+移除master 主机：      当移出master主机时，hash槽释放给其它主机,数据也会跟着到其它主机
+1.指定移出hash槽个数
+  指定接受hash槽主机ID
+  指定要移出hash槽主机ID
+
+	1.redis-trib.rb reshard 192.168.4.58:6358
+	  接受hash槽ID值
+	  本身的hash槽ID值
+	      done
+		yes
+2.移除master主机
+	redis-trib.rb del-node 192.168.4.58:6358  ID值
+
+重新把宕机的主机加入集群
+1.把/var/lib/redis/6379下面的都删除，重启服务
+2.再加到集群里
+
+
+
+
