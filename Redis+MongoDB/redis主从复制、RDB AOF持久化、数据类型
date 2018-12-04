@@ -99,6 +99,76 @@ auto-aof-rewrite-min-size 64mb
 若时把/var/lib/redis/6379/appendonly.aof 里面的内容搞乱了，将登不进服务
 把文件恢复到最后一次的正确操作，若是在中间破坏了，将恢复不了，只能是最后一次
 	redis-check-aof --fix appendonly.aof
+########################################################################################
+
+string 字符串
+1.字符串操作
+	set first "hello world"
+	setrange first 6 "redis"		从第6位开始改为redis
+2.统计变量值长度
+	strlen 变量
+3.追加
+	append 变量  值
+	append aa  xx
+4.位存储统计，节约内存
+	setbit 变量 offset value		offset:可以是0～2^32之间
+	setbit bit 1 1			value 值只能是 1 或 0
+	bitcount bit 	统计变量值设置为1的数量，可以用于用户上线频率，offer可以是定义为1，2..月或周
+5.变量值自动
+	decr 变量 数值
+	set aa 100
+	decr aa 		aa中的值减 1，变为99
+	decrby aa 20	aa中的值减 20，100变为 80
+6.截取字符串
+	set hostname www.tedu.cn
+	getrange hostname -3 -1		截取倒数第3位到最后一位
+	getrange hostname 0 3		截取0位到第3位
+
+7.变量值自动加
+	incr 	aa		变量值加 1
+	incrby aa 3		变量值加 3
+	incrbyfloat aa 0.5	变量值加 0.5
+
+8.	mset 变量 值 变量 值 变量 值 ...	统一设置变量值
+	mget key1 key2 ...	获取多个变量值
+################################################################################
+
+list 列表
+	lpush 变量  多个值
+	lpush stuname tom lucy lisi
+	lrange stuname 0 -1		从开始读到结束位止
+	lrange stunmae 0 -2		从开始读到倒数第2位位止
+	lrange stuname 0 2
+lindex stuname 0		输出0位的值
+
+删除列表表头的变量值
+lpop 变量
+lpop stuname
+
+llen stuname		统计list列表变量值的个数
+
+lset stuname 0 harry	把0位值改位harry
+
+rpush stuname jack alice		在变量末尾添加值
+rpop stuname	删除表末尾的一个值
+###############################################################################
+
+hash 表,创建多个字段
+
+hset 变量 baidu  www.baidu.com  
+hget 变量  baidu 	列出字段的值
+
+hmset 变量 baidu www.baidu.com google www.g.cn
+hmget 变量 baidu google
+
+hkeys 变量 		列出所有的字段名
+hgetall 变量		输出所有字段和值
+hvals 变量		输出所有字段的值
+
+hdel 变量  baidu 	删除字段和其下面的值
+
+
+
 
 
 
