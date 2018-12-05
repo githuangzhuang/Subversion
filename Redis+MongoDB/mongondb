@@ -1,0 +1,118 @@
+部署mongodb服务
+解包
+创建mongodb的副目录，可以随便定义
+在mongodb副目录里创建存放配置文件的目录
+创建存放日志文件和数据库的目录，必须是data/db
+修改配置文件，指定数据库目录，日志文件，以追加的方式记录日志信息，服务以守护进程的方式运行
+
+1.tar -xf mongodb-linux-x86_64-rhel70-3.6.3.tgz
+	mkdir /usr/local/mongodb
+  cp mongodb-linux-x86_64-rhel70-3.6.3/bin  /usr/local/mongodb
+	cd /usr/local/mongodb
+	mkdir -p data/db  log  etc
+
+2.修改配置文件
+	vim etc/mongodb.conf
+	logpath=/usr/local/mongodb/log/mongodb.log
+	logappend=true
+	dbpath=/usr/local/mongodb/data/db
+	fork=true
+	
+3.启服务
+	./bin/mongod -f /usr/local/mongodb/etc/mongodb.conf	
+4.连接到服务
+	./bin/mongo
+
+停止服务 ./bin/mongod -f /usr/local/mongodb/etc/mongodb.conf  --shutdown	
+
+设置PATH变量
+	vim /etc/profile
+	export PATH=/usr/local/mongodb/bin:$PATH
+		source /etc/profile
+
+在配置文件中指定IP地址和端口 vim etc/mongodb.conf
+		bind_ip=192.168.4.51
+		port=27050
+	
+连接服务需要加ip和端口
+	mongo --host 192.168.4.51 --port 27050
+############################################################################################
+
+数据库管理，区分字母大小写
+查看已有的库				show dbs
+显示当前所在的库			db
+切换库，若库不存在延时创建库		use 库名
+查看库下已有集合			show tables/collections
+删除当前所在的库			db.dropDatabase()
+
+db.集合名.save({name:"bob",age:"21"})
+db.集合名.drop()	删除集合
+
+查看集合		db.集合名.find()
+统计集合个数		db.集合名.count()
+插入数据		db.集合名.insert({name:"tom",shell:"/bin"})
+根据条件查找		db.集合名.find({name:"tom"})
+查看一条文档		db.集合名.findOne()
+删除所有文档		db.集合名.remove({})
+删除匹配的所有的文档	db.集合名.remove({name:"tom"})
+
+布尔bool
+	布尔类型有两个值true和false，{x:true}
+空null
+	用于表示空值或不存在的字段，{x:null}
+
+数值，shell默认使用64位i浮点型数值，{x:3.14} 或 {x:3}
+	NumberInt(4字节整数) {x:NumberInt(3)}
+	NumberLong(8字节整数) {x:NumberLong(3)}
+数组array
+	数据列表或数据集可以表示为数组，{x:["a","b","c"]}
+代码
+	{x:function(){/* 代码 */}}
+
+日期
+	{x:new Date()}
+对象，对象id是一个12字节的字符串，是文档的唯一标识，默认就有，可以不用再另外添加
+	{x:ObjectId()}
+
+内嵌
+	{x:{adr:"beijing",tel:"5555"}}
+正则表达式
+	{x:/正则表达式/}	{x:/^$/}
+####################################################################################
+
+数据导入导出
+1.导出
+	bin/mongoexport --host IP地址 --port 端口  -d 库名 -c 集合名 -q '{条件}' -f 字段名1，字段2 --type=csv > 路径/文件名.csv
+
+json格式
+	bin/mongoexport --host IP地址 --port 端口 -d 库名 -c 集合名 --type=json > /路径/文件名.json	 
+
+./mongoexport --host 192.168.4.52 --port 27050 -d a -c passwd --type=json > /mnt/passwd2.json
+
+bin/mongoimport --host IP地址 --port 端口 -d 新库 -c 集合名  --type=csv --headerline --drop /路径/文件名.csv
+
+1.导入数据时，若库和集合不存在，则先创建库和集合后再导入数据
+2.若库和集合已存在，则以追加的方式导入数据到集合里
+3.使用--drop选项可以删除原数据后导入新数据，--headerline 忽略标题
+4.对于像要把/etc/passwd文件导入到数据库中，使用csc格式比较简单，要先把：改位逗号，再添加每个值的字段，转化为csv格式导入
+5.--headerline 和 -f 字段名 两者至少有一个
+####################################################################################
+
+数据备份
+	bin/mongodump --host ip地址 --port 端口     备份所有库
+备份指定库
+	mkdir /mbak
+bin/mongodump --host ip地址 --port 端口 -d 库名 -c 集合名 -o 目录
+查看备份文件内容
+	bin/bsondump ./dump/bbs.t1.bson
+
+数据恢复
+	bin/mongorestore --host ip地址 --port 端口 -d 库名 -c 集合名 备份目录名
+若是完全备份，则无需指定库名和集合名,默认会在mongodb目录下生成dump目录下
+	在连接服务下，查看数据时，数据过多，默认显示是20行，会提示“it”，输入it会再显示后面的
+
+
+
+
+
+
