@@ -122,6 +122,7 @@ flush privileges;     刷新
 
 查看半同步复制模式是否启用	show variables like "rpl_semi_sync_%_enabled";
 
-
+mysqldump -uroot -p密码 --master-data db15 > my.sql
+vim my.sql 查看备份时刻的binglog日志，再把差异的日志增量备份到从库上
 
 
