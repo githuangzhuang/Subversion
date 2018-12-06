@@ -44,7 +44,7 @@ del 变量	删除变量
 move 变量 2	移动变量到2库
 flushdb	清除当前库的数据
 flushall	清除内存所有数据，慎重
-save		保存所有数据
+save		阻塞保存所有数据        bgsave   不阻塞保存数据，在生产中使用
 shutdown	停止服务
 type 变量	查看类型,tring是字符类型
 
