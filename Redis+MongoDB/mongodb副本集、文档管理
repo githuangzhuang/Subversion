@@ -1,0 +1,183 @@
+配置MongoDB副本集
+也称为MongoDB复制
+指在多个服务器上存储数据副本，并实现数据同步
+提高数据可用性 安全性 方便数据故障恢复
+51   52   53 
+工作过程
+一个是主节点，负责处理客户端请求，其余的都是从节点，负责复制主节点上的数据，	实现存储数据副本，提高了数据的可用性（不指定priorit默认第一个为主）	
+主节点记录所有操作oplog 
+主从复制的优点
+从节点提供数据查询，降低主节点的访问压力
+由从节点执行备份，避免锁定主节点数据
+主节点故障时，可快速切换到从节点，实现高可用
+
+配置51-53
+1.启用副本集配置，模式replSet,集群名rs1
+2.创建副本集，定义集群成员列表，若定义打错了，重新定义变量
+3.初始化replica Sets  即创建集群
+4.测试副本集高可用
+
+加入到副本集，rs1名字随便起，想知道谁和我在一个副本集里，三台机器的名字一样,都写rs1
+	1.vim etc/mongodb.conf
+	  dbpath=/usr/local/mongodb/data/db/
+	  logpath=/usr/local/mongodb/log/mongodb.log
+	  logappend=true 
+	  fork=true
+	  bind_ip=192.168.4.51
+	  port=27077
+	  replSet=rs1        
+
+启动,连接
+	 mongod  -f /etc/mongodb/etc/mongodb.conf 
+	 mongo --host 192.168.4.51 --port 27051
+
+
+     2.config = {        //config随便起变量名,要记住
+ 	 _id:"rs1",         //必须为rs1这个，三台主机集群名，配置文件里面写的是这个
+	 members:[
+ 	{_id:0,host:"192.168.4.51:27051"},        //_id值随意，host值固定
+ 	{_id:1,host:"192.168.4.52:27052"},
+ 	{_id:2,host:"192.168.4.53:27053"}
+ 	 ]
+ 	 }      
+
+
+	 3.rs.initiate(config)
+
+
+注意：如果初始化错误，重启服务登陆之后重新设置变量，之后再重新初始化
+配置错误:删除local 库
+
+查看状态信息
+	rs1:PRIMARY>  rs.status()
+ 
+查看是否是master库
+	rs1:PRIMARY>  rs .isMaster( )
+
+
+4.验证副本集，同步数据验证（51上面写数据）52上面查看,从库开启功能 使用命令方可查看,从库不能插入数据
+	rs1:SECONDARY> db.getMongo().setSlaveOk()
+
+自动切换主库验证，主库宕机后，从库变为主库，当宕机的主机重新启服务，就变为从库，差异的数据自动从主库同步到本机上
+	./mongod -f /etc/mongodb/etc/mongodb.conf --shutdown 
+	rs1:SECONDARY> rs.isMaster()	
+##########################################################################################
+
+文档管理
+save()	集合不存在时创建集合，再插入记录，_id字段值已存在，修改字段值
+insert()	集合不存在时创建集合，再插入记录，_id字段值已存在，放弃插入
+db.c1.save({_id:12,name:'tom'})
+db.c1.save({_id:12,name:'jack'})	name值会变成 jack
+db.c1.save({_id:12,name:'lucy'})	修改不会成功
+
+一次插入多条文档信息
+db.集合名.insertMany([{},{},{}])
+db.a.txt.insertMany([{name:'tome',age:12},{name:'jarry',age:18}])
+
+查询语法
+>db.集合名.find() 显示所有行 默认输出20行 输入it显示后续行
+db.集合名.findOne()  显示第一行
+指定查询条件并指定显示的字段
+
+db.集合名.find({条件},{定义显示的字段})  // 0不显示 , 1 显示
+db.t1.find({},{_id:0,name:1,shell:1})
+
+行数显示限制
+limit(数字)
+	db.集合名.find().limit(3) 显示前3行
+	db.t1.find({shell:"/bin/bash"}).limit(3)
+skip(数字)
+	db.集合名.find().skip(2)  跳过前2行
+	db.t1.find({},{_id:0}).skip(40)
+
+排序：sort(字段名)
+	db.集合名.find().sort({age:1|-1})  // 1 升序 -1 降序
+统计：count()
+	db.t1.find({shell:"/bin/bash"}).count()
+	db.t1.count()
+	db.t1.find({shell:"/sbin/nologin"},{_id:0,name:1,uid:1,shell:1}).skip(2).imit(2)
+###############################################################################
+
+匹配条件
+简单条件  相等
+ 	db.t1.find({name:"root",uid:0},{_id:0,name:1,uid:1})
+
+范围比较
+$in  在....里
+$nin  不再...里
+$or   或 
+>db.t1.find({uid:{$in:[1,3,7,9]}},{_id:0,name:1,uid:1})
+> db.t1.find({uid:{$nin:[1,5,7,9]}},{_id:0,name:1,uid:1}).limit(10)
+>db.t1.find({$or:[{name:"root"},{uid:3}]},{_id:0,name:1,uid:1})
+
+数值比较
+$lt   $lte  $gt  $gte   $ne
+<       <=     >     >=    !=
+db.t1.find({uid:{$lte:10}},{_id:0,name:1,uid:1})
+db.t1.find({uid:{$gte:6,$lte:10}})			大于等于6且小于等于10的
+
+正则匹配
+db.t1.find({name:/^a/},{_id:0,name:1})
+db.t1.find({user:/^...$/},{_id:0,user:1})        user是三个字母的
+
+null匹配 匹配字段是否为空 或者没有这个字段(列)
+> db.t1.save({hmhk:123})
+> db.t1.save({name:null})
+>db.t1.find({name:null},{_id:0})
+{ "name" : null }
+{ "hmhk" : 123 }
+###################################################################################
+
+更新文档 update 
+db.t1.find({uid:{$lt:4}},{_id:0})
+db.t1.update({uid:{$lte:4}},{pass:"aaa"})
+少了第一行  把文件的其他字段都删除了,只留下pass字段,只修改匹配条件的第1行
+
+$set /$unset
+db.t1.update({uid:{$lt:4}},{$set:{pass:”aaa”}}.false,true)
+db.t1.update({uid:70},{$set:{pass:'f',shell:'/bin/bash'}},false,true)
+匹配的  只修改pass 其他字段不改
+db.t1.update({uid:{$lte:2}},{$unset:{pass:'f'}})
+只删除uid<=2的第一行字段pass=f的字段，若加false,true把uid<=2的pass字段全删除
+
+> db.t1.find({uid:7},{_id:0})
+db.t1.update({uid:7},{$unset:{pass:”x”}})
+> db.t1.find({uid:7},{_id:0})
+只删除与条件匹配的字段 pass 
+
+$inc 条件匹配时,字段自加或自减
+db.集合名.update({条件},{$inc:{字段名:数字}})
+	db.t1.update({name:”adm”},{$inc:{uid:2}})   //uid 加2
+	db.t1.update({name:”adm”},{$inc:{uid:-2},false,true})   //uid 减2
+加false,true是全部执行，不加只执行第一个
+
+$push
+$push向数组中添加新元素
+db.集合名.update({条件},{$push:{数组名:”值”}})
+	db.t1.insert({name:”bob”,likes:[“a”,”b”,”c”,”d”]})
+	db.t1.update({name:”bob”},{$push:{likes:”w”}})
+$addToSet 避免重复添加
+	db.集合名.update({条件},{$addToSet:{数据名:”值”}})
+	db.集合名.update({name:”bob”},{$addToSet:{likes;”w”}})
+
+$pop从数组头部删除一个元素
+db.集合名.update({条件},{$pop;{数组名:数字}}) 1 删除数组尾部元素 -1 删除数组头部元素
+db.t1.update({name:”bob”},{$pop:{likes:1}})
+db.t1.update({name:”bob”},{$pop:{likes:-1}})
+
+$pull 删除数组指定元素
+db.集合名.update({条件},{$pull:{数组名:”值”}})
+db.t1.update({name:”bob”},{$pull:{likes:”b”}})
+
+删除文档
+$drop  删除集合的同时删除索引
+db.集合名.drop()
+db.t1.drop()
+$remove() 删除文档时不删除索引 
+db.集合名.remove({})   //删除所有文档
+db.集合名.remove({条件}) //删除匹配条件的文档
+db.t1.remove({uid:{$lte:10}})
+
+
+
+
