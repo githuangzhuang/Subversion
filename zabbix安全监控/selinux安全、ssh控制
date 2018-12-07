@@ -1,0 +1,110 @@
+给临时账户设有效期
+查看账户信息
+	chage -l  账户名称		
+修改账户有效期
+	chage -E 时间  账户名称
+	chage -E 2019-12-25 tom
+定义默认有效期
+	vim /etc/login.defs
+	PASS_MAX_DAYS	99999	密码最长有效期
+	PASS_MIN_DAYS	0	密码最短有效期
+	PASS_MIN——LEN	5	密码最短长度
+	PASS_WARN_AGE	7	密码过期前几天提示警告
+	UID_MIN	1000		uid最小值
+	UID_MAX	60000		uid最大值
+
+锁定用户账户			解锁用户              使用usermod -L/-U 用户名，一样可以锁/解用户
+passwd -l 用户名		passwd -u 用户名
+
+查看用户状态
+	passwd -S 用户名
+强制用户修改密码
+	chage -d 0 用户名 
+
+修改tty登入提示信息，隐藏系统版本
+	vim /etc/issue	可以随便修改,本地修改
+	vim /etc/issue.net	远程登入
+
+vim /etc/fstab
+	....defaults,noexec  0 0
+	.....defaults,noatime 0 0
+noexec属性可以让分区下的所有程序都不可执行，包括病毒与木马,生产环境一般数据分区加
+noatime让分区下的所有文件都不再更新atime时间，atime时间为文件的访问时间，生产环境给所有分区加，若不加会耗cup
+
+###########################################################################################
+对于重要文件：
+chattr +i 文件名	锁定文件，文法修改，删除等，只能查看
+chattr -i 文件名	解锁文件
+chattr +a 文件名	锁定文件仅可追加，不能修改原本的和删除
+chattr -a 文件名	解锁文件
+lsattr 文件名	查看文件隐藏特殊属性
+
+使用sudo分配管理权限
+	su - 用户名 -c "命令"
+	su - 用户名 -c "touch /tmp/a.txt"	在用户下创建个文件
+
+允许tom用户通过systemctl 工具来管理系统服务
+	useradd tom
+	vim /etc/sudoers		vim修改文件，需要强制保存
+	tom ALL=(ALL)  /usr/bin/systemctl,/bin/*,/usr/bin/passwd [A-Za-z]*, !/usr/bin/passwd root
+
+可以定义别名给权限，配置文件中有模版可以借鉴
+不能给root修改密码，可以参考 man sudoers,查pete那行
+/usr/bin/passwd [A-Za-z]*, !/usr/bin/passwd root
+
+	su - tom
+	sudo systemctl start httpd	执行命令前必须加sudo才可以执行
+
+把用户加入 wheel组就变成超级管理员
+	usermod -a -G wheel 用户名
+
+修改sudo机制启用日志记录，以便跟踪sudo执行操作
+	vim /etc/sudoers
+	Defaults logfile="/var/log/sudo"
+
+##########################################################################
+调整sshd服务配置基本安全策略
+	vim /etc/ssh/sshd_config
+	Protocol 2			 //SSH协议
+	PermitRootLogin no        //禁止root用户登录
+	PermitEmptyPasswords no   //禁止密码为空的用户登录
+	UseDNS  no                //不解析客户机地址
+	LoginGraceTime  1m        //登录限时
+	MaxAuthTries  3           //每连接最多认证次数,初始值为2时，三次就为6
+
+systemctl restart sshd
+注意，生产环境中一般都是sudo，会把root用户登录禁止，要先把一个用户加入到wheel组，拥有超级用户权限
+
+AllowUsers zhangsan tom useradm@192.168.4.0/24     //定义账户白名单
+DenyUsers  tom  lucy  jarry			 //定义账户黑名单
+
+清空用户口令
+	passwd -d 用户名
+
+putty （英文软件正版） xshell (官方中文版for school免费） linux连接windowns
+
+尽量使用私钥免密连接,公钥传给对方
+	ssh-keygen
+	ssh-copy-id IP
+/root/.ssh/id_rsa id_rsa.pub
+
+把公钥放到对方的 /root/.ssh/authorized_keys       可参考 /etc/ssh/sshd_config
+
+#########################################################################33
+
+selinux 安全防护
+	vim /etc/selinux/config
+生产环境中一般都是设为   disabled
+
+若selinux=Enforcing
+	从root下移文件到 /var/ftp/pub/ 下，共享看不到文件,因为标签不一样,执行下面操作就可以，a.txt文件可以看得到，且在pub里面，已开始就selinux禁用模式就无需这操作
+	chcon --reference=a.txt root.txt
+
+
+
+
+
+
+
+
+
