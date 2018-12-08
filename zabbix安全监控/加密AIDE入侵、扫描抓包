@@ -1,0 +1,79 @@
+加密算法方式：
+	对称加密	DES	AES
+	非对称加密	RSA	DSA
+常见的加密算法：
+	Hash散列技术，用于信息摘要
+使用MD5完成性检验
+	md5sum a.txt
+gpg对称加密/解密
+	gpg -c/symmetric 文件		
+	gpg -d/decrypt 文件 > x/txt
+	gpg -c a.txt	生成一个加密文件 a.txt.gpg
+	gpg -d a.txt.gpg > aa.txt	解密到aa.txt文件里
+非对称密钥：私钥（解密），公钥（加密）
+UserA（生成一对密钥）			gpg --gen-key
+UserA 把（公钥）传给UserB
+UserB使用（公钥）加密数据，并把数据传给UserA
+UserA 最后使用自己的私钥解密数据
+	1.生成密钥终端无法使用，执行reset命令或关闭终端再开一个，或mv /dev/random{,.bak}一路回车，中间确认是大写的O，不用输密码，
+	gpg --gen-key
+	gpg --list-keys	查看公钥
+	gpg -a --export xx > mykey	公钥文本导出
+xx可以是密钥的名字，也可以是邮箱，最好是（pub 2048R/88E51A67）这里面的88E51A67
+	2.scp mykey 192.168.4.56:/root		对方哪个目录随便
+	3.gpg --import 路径/文件名
+	  gpg --import /root/mykey
+	  gpg --list-keys
+
+	  echo "hello" > love.txt
+	  gpg -e -r usera love.txt
+	  scp love.txt.gpg useraIP地址:/root
+	  scp love.txt.gpg 192.168.4.55:/root
+	4.gpg -d love.txt.gpg > love.txt
+	  cat love.txt
+
+使用gpg签名机制
+1.建立测试软件包
+2.创建分离式数字签名
+3.将签名文件与签名传给对方
+4.验证签名
+	1.tar -zcf log.tar.gz /var/log
+	2.gpg -b log.tar.gz
+	3.scp log.tar* 192.168.4.56:/root
+	4.gpg --verify log.tar.sig log.tar.gz
+
+###############################################################################3
+aide入侵检测系统
+1.安装软件包 aide
+2.修改配置文件
+3.初始化检查
+4.备份数据库
+5.入侵检测	检测之前必须要把之前的备份数据放到 /var/lib/aide/aide/db/gz
+
+	1.yum -y install aide
+	2.99行/boot/   CONTENT_EX		监控目录
+	  ctrl+v-->下键-->shift+i-->Esc	批量加注释#
+	  ctrl+v-->下键-->x			删除注释#
+	3.aide --init   
+	4.cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+	5.aide --check
+######################################################################
+
+扫描与抓包分析
+	yum -y install nmap
+	nmap -n -sP ip地址/望段
+	nmap -sT 176.52.10.0/24
+-n	不执行DNS解析
+-sS	TCP SYN扫描（半开）
+-sT	TCP 连接扫描（全开）
+-sU	UDP 扫描
+-sP	ICMP扫描ping的协议
+-A	目标系统全面分析
+	traceroute www.baidu.com		路由跟踪
+
+使用tcpdump分析FTP访问中的明文交换信息
+	yum -y install vsftpd
+客户端下载安装 ftp,访问对方共享文件
+	yum -y install ftp
+	tcpdump -A host 192.168.4.55 and tcp port 21
+	
