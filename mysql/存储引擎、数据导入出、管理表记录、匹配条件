@@ -129,7 +129,7 @@ select * from into outfile "目录名/文件名";
               insert into user (name,uid,gid) values ("tom",4001,4002);
  2.查询        select 字段 from 表名 where 条件；
             select name,id from user where uid<=20;
- 3.更新           updata 表名 set 字段=字段值 where 条件表达式;
+ 3.更新           update 表名 set 字段=字段值 where 条件表达式;
  4.删除         delete from user where shell is null;
 
 ################################################################################
