@@ -1,7 +1,7 @@
 数据备份                                                      mysqldump -uxx -p --single-transaction --master-data=2 --routines \
 物理备份：直接拷贝cp tar                                       --flush-logs --databases db1 db2 > db.sql
 逻辑备份：mysql 命令备份 存储在指定的文件                        --single-transaction   只针对于innodb引擎，myisam另外备份
-数据备份策略
+数据备份策略                                                  --master-data会启用全局锁，使用上面进行了优化，只是开始备份持有
 完全备份：
 	备份所有数据
 增量备份：
