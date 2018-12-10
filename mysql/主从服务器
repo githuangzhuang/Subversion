@@ -17,7 +17,7 @@ SQL线程：执行本机relay-log文件里的sql命令，把数据写入到本�
 	2. vim /etc/my.cnf
 	   log_bin=日志名
 	   server_id= id值
-     	   bilog_format="mixd"
+     	   binlog_format="mixd"
 	   systemctl restart mysqld
 	  >grant replication slave on *.* to repluser@"%" identified by "123456";
 	   show master status;	
