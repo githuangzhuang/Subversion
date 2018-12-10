@@ -53,7 +53,8 @@ show databases;                         #查看数据库的库
    validate_password_policy=0
    validate_password_length=6
 再重启mysqld
-
+  systemctl restart mysqld
+  
 把数据存储到数据库的流程
 1.连接服务器  建库  建表  插入记录  断开连接
 数据库服务器 <--- 库<--- 表<--- 记录 <--- 列  
