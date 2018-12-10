@@ -159,6 +159,8 @@ sleep(n)         休眠n妙
 insert into t5 values("tom","eat,sleep","boy");      #必须是列举里面的
 
 登入mysql 交互登入防止历史记录被人查看
+mysql -u用户名 -p
+
 清除隐藏的历史记录文件shell端 > .bash_history
 mysql的历史记录文件  > .mysql_history 
 可以用windows商业版 navicat软件，连接mysql
