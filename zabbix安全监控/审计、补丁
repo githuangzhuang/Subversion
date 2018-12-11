@@ -1,0 +1,139 @@
+审计不会为系统提供额外的安全保护，但会发现并记录违反安全策略的人及其对应的行为
+jumpserver软件，开源，部署麻烦
+audit系统自带,不能关闭
+主配置文件 /etc/audit/audited.conf
+日志文件  log_file=/var/log/audit/audit.log
+查询状态  audictl -s
+查看规则  auditctl -l
+删除所有规则 auditctl -D
+
+定义临时规则
+	auditctl -w path -p rwax -k path_change
+-w 后面接要审计的目录或文件
+-p 后面接要审计的规则
+-k 定义别名，方便以后查看
+定义永久规则
+	/etc/audit/rules.d/audit.rules/audit.rules
+查看规则，把下面的规则复制粘贴
+
+tailf /var/log/audit/audit.log
+通过工具查找
+	ausearch -k 别名 -i			-i 把十进制转化为可见
+	ausearch -k passwd_change -i
+生产当中是程序员开发为图形形式分析
+
+nginx 模块不需要的卸掉
+列出默认安装的模块	
+./configure --help | grep "\-\-without"
+
+./configure --without-http_autoindex_module --without -http_autoindex_module
+
+隐藏版本号信息
+	vim /usr/local/nginx/conf/nginx.conf
+	server_tokens off;		手动添加
+修改软件名称nginx 可改可不改
+	cd nginx-1.12
+	vim +48 src/http/ngx_http_header_filter_module.c
+	"server: 任意名"CRLF；
+	killall nginx
+	nginx
+查看版本信息验证：
+	curl -I 192.168.4.56
+	
+限制并发量
+	vim /usr/local/nginx/conf/nginx.conf
+	http{
+… …
+limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+	server{
+	.......
+	 limit_req zone=one burst=5;
+
+#limit_req_zone语法格式如下：
+#limit_req_zone key zone=name:size rate=rate;
+#上面案例中是将客户端IP信息存储名称为one的共享内存，内存空间为10M
+#1M可以存储8千个IP信息，10M可以存储8万个主机连接的状态，容量可以根据需要任意调整
+#每秒中仅接受1个请求，多余的放入漏斗
+#漏斗超过5个则报错
+
+拒绝非法请求
+	vim /usr/local/nginx/conf/nginx.conf
+	http{
+	server{
+		if ($request_method !~ ^(GET|POST)$ ) {
+                     return 444;
+               }    
+
+	nginx -s reload
+客户端
+	curl -i -X get http://192.168.4.56	报错
+	curl -i -X head http://192.168.4.56	报错
+
+防止buffer溢出
+	vim /usr/local/nginx/conf/nginx.conf
+	http{
+	client_body_buffer_size  15K;
+	client_header_buffer_size 15k;
+	client_max_body_size 15k;
+	large_client_header_buffers 2 10k;
+
+出现重要操作，历史操作要清除	history -c
+清除隐藏的历史记录和数据库的		> .bash_history
+> 是清除的意思			> .mysql_history
+###########################################################################
+
+tomcat安全性，修改版本信息：
+	yum -y install java-1.8.0-openjdk-devel
+	cd /usr/local/tomcat/lib/
+	jar -xf catalina.jar
+	vim org/apache/catalina/util/ServerInfo.properties
+	server.info=Apache
+	server.number=1.0		都随便修改
+/usr/local/tomcat/bin/shutdown.sh        //关闭服务
+/usr/local/tomcat/bin/startup.sh        //启动服务
+
+再次修改tomcat服务器配置文件，修改版本信息，手动添加server参数
+vim /usr/local/tomcat/conf/server.xml
+<Connector port="8080" protocol="HTTP/1.1"
+connectionTimeout="20000"  redirectPort="8443" server="jacob" />
+/usr/local/tomcat/bin/shutdown.sh 
+/usr/local/tomcat/bin/startup.sh
+
+降级启动，不要用root
+	useradd tomcat
+	chown -R tomcat:tomcat /usr/local/tomcat
+	su -c /usr/local/tomcat/bin/startup.sh
+	ps aux | grep tomcat		查看
+
+使用diff和patch工具打补丁
+两个版本的脚本，一个v1，一个v2
+	diff -u v1 v2		查看文件差异
+生成打补丁
+	diff -u v1 v2 > test.patch
+使用patch打补丁
+	yum -y install patch
+	patch -p0 < test.patch
+还原旧版本
+	patch -R -p0 < test.patch
+
+制作补丁文件
+	cp /bin/find source1
+	cp /bin/find source2
+	echo "1" >> source2/find
+
+制作补丁
+	diff -Nuar source1 source2
+生成补丁文件
+	diff -Nuar source1 source2 > source.path
+为代码打补丁,哪个文件有问题，就先cd进入
+	cd source1
+	patch -p1 <../source.patch
+-p1是找到目标文件前有1个目录，需要去掉，可以在生成补丁文件中看到
+..是上一级目录
+
+
+
+对于数据量特别大上T的 mysql 快照 LVM pv,vg,lv +锁  cp或rsync 备份
+	
+
+
