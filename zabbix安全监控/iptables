@@ -1,0 +1,109 @@
+软件：iptables-services
+服务：iptables.service
+
+raw表，清空，状态跟踪会耗损cup，降低性能
+4表5链
+4表：nat(地址转换)	filter(数据过滤表)	raw(状态跟踪)	mangle(包标记表)
+5链：INPUT(入站规则)	OUTPUT(出站规则)	FOUWARD(转发)	PREROUTING(路由前)	POSTROUTING(路由后)
+从上往下，匹配即停止，如果没有匹配，则按默认规则
+
+iptables 语法格式
+	iptables 【-t 表名】 选项  【链名】 【 条件】 【-j 目标操作】
+	iptables -t filter -I INPUT -p tcp -j ACCEPT
+
+目标操作：RCCEPT	REJECT	DROP
+协议：
+-p icmp	ping 的协议
+-p tcp
+-p udp
+
+选项
+	-A	添加一条规则到链的末尾
+	-I	添加一条规则到链的开头
+	-L	查看iptables所有规则
+	-n	以数字形式显示地址、端口等信息
+	--line-numbers	查看规则时，显示规则行号
+	-D	删除链内指定序号（或内容）的一条规则
+	-F	清空所有的规则
+	-P	为指定的链设置默认规则
+
+查看规则且加行号：
+	iptables -t nat -nL --line-numbers
+删除第3条规则：
+	iptables -D	INPUT 3
+清空所有规则
+	iptables -t filter -F
+	iptables -t nat -F
+默认为ACCEPT，修改为DROP，默认只能为这两种，
+	iptables -P INPUT ACCEPT
+	iptables -P INPUT DROP
+
+filter控制和过滤
+通用匹配：
+	-p	协议名称
+	-s 源地址、 -d目标地址
+	-i 接受数据的网卡、-o 发送数据的网卡
+隐含匹配;
+	--sport 源端口号、 --dport目标端口号
+	--icmp-type	ICMP类型
+
+不允许某网址ping本机
+iptables -I INPUT -s 192.168.4.55 -p icmp -j REJECT
+iptables -I OUTPUT -d 192.168.4.254 -p icmp -j DROP
+
+静止访问本机eth0网卡
+iptables -I INPUT -s 192.168.4.55 -i eth0 -p icmp -j REJECT 
+
+iptables  -nL INPUT --line-numbers
+
+端口必须要加协议
+	iptables -I INPUT -p tcp --dport 80 -j REJECT
+
+##################################################################
+网络型防火墙,保护路由转发的主机，
+
+   iptables -I FORWARD -s 192.168.4.55 -p tcp --dport 80 -j REJECT
+
+禁止其它主机ping本机，允许本机ping其它主机
+	iptables -I INPUT -p icmp --icmp-type echo-request -j REJECT
+关于icmp的类型，参考help帮助
+	iptables -p icmp --help
+
+
+扩展匹配
+iptables 选项 链 -m 扩展模块 --具体扩展条件 -j 动作
+-m iprange --src-range IP1-IP2
+-m iprange --dst-range IP1-IP2
+-m multiport --sports 源端口列表
+-m multiport --dports 目标端口列表
+-m mac --mac-source MAC地址
+
+换了IP攻击，可以直接拒绝MAC地址
+iptables -I INPUT -m mac --mac 52:54:00:2B:69:D2 -p tcp --dport 22 -j REJECT 
+查看MAC地址	nmap -n -sP ip地址
+
+一次拒绝/允许多个端口 1:5是连续
+	iptables -I INPUT -m multiport --dportS 1:5,80,60,55 -j REJECT
+
+iptables -I INPUT -m iprange --src 192.168.4.1-192.168.4.22 -j REJECT
+
+##################################################################################
+配置SNAT实现共享上网
+iptables -t nat -I POSTROUTING -s 192.168.4.0/24 -p tcp --dport 80 -j SNAT --to-source 192.168.2.5
+# 4网段的全部伪装成公网ip，但只能是访问网页
+
+对于外网ip不固定的情况下可以动态伪装IP
+	iptables -t nat -I POSTROUTING -s 192.168.4.0/24 -j MASQUERADE
+永久保存
+	service  iptables save
+
+虚拟机上网
+1.网关为可以连接直接的ip
+2.添加dns域名解析
+nmcli connection modify eth0 ipv4.method manual ipv4.dns 8.8.8.8
+nmcli connection up eth0
+
+3.真机配置SNAT，伪装公网IP为本机上网ip
+
+
+
