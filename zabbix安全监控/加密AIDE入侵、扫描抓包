@@ -61,7 +61,7 @@ aide入侵检测系统
 
 扫描与抓包分析
 	yum -y install nmap
-	nmap -n -sP ip地址/望段
+	nmap -n -sP ip地址/网段
 	nmap -sT 176.52.10.0/24
 -n	不执行DNS解析
 -sS	TCP SYN扫描（半开）
