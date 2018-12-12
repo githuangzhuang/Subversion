@@ -52,7 +52,7 @@ aide入侵检测系统
 
 	1.yum -y install aide
 	2.99行/boot/   CONTENT_EX		监控目录
-	  ctrl+v-->下键-->shift+i-->Esc	批量加注释#
+	  ctrl+v-->下键-->shift+i-->#--->Esc	批量加注释#
 	  ctrl+v-->下键-->x			删除注释#
 	3.aide --init   
 	4.cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
