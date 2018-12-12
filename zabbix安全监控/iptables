@@ -83,7 +83,7 @@ iptables -I INPUT -m mac --mac 52:54:00:2B:69:D2 -p tcp --dport 22 -j REJECT
 查看MAC地址	nmap -n -sP ip地址
 
 一次拒绝/允许多个端口 1:5是连续
-	iptables -I INPUT -m multiport --dportS 1:5,80,60,55 -j REJECT
+	iptables -I INPUT -p tcp -m multiport --dports 1:5,80,60,55 -j REJECT
 
 iptables -I INPUT -m iprange --src 192.168.4.1-192.168.4.22 -j REJECT
 
