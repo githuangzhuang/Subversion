@@ -52,18 +52,19 @@ redis-sentinel /etc/sentinel.conf
 5.恢复时，将快照文件直接读入内存
 6.数据从内存保存到硬盘的频率，也可以用手动save保存
 
+# save ""          启用RDB，去掉#号为禁用RDB
 save 900 1		900秒内且有1次修改就保存
 save 300 10
 save 60 10000
 dump.rdb=内存的数据定期保存到硬盘内
 备份数据把dump.rdb备份
-cp /var/lib/redis/6379/dump.rdb  /root
+cp /var/lib/redis/6379/dump.rdb  /root/dump.rdb.bak
 
 恢复数据
 1.先停止服务，否则会覆盖掉
 2.把dump.rdb 放到/etc xia  
 	1. /etc/init.d/redis_6379 stop
-	2.cp /root/dump.rdb  /var/lib/redis/6379
+	2.cp /root/dump.rdb.bak /var/lib/redis/6379/dump.rdb
 	  /etc/init.d/redis_6379 start
 
 优点：高性能的持久化实现--子进程来执行持久化，先将数据写入临时文件，持久化过程结束后，再用这个临时文件替换上次持久化好的文件，过程中主进程不做任何IO操作
@@ -78,11 +79,11 @@ cp /var/lib/redis/6379/dump.rdb  /root
 
 vim /etc/redis/6379.conf
 	appendonly  yes
-	
+        appendfilenmae "appendonly.aof"
 恢复数据：
-	cp /var/lib/redis/6379/appendonly.aof /root
+	cp /var/lib/redis/6379/appendonly.aof /root/appendonly.aof.bak
 	rm -rf /var/lib/redis/6379/appendonly.aof
-	cp /root/appendonly.aof  /var/lib/redis/6379/appendonly.aof
+	cp /root/appendonly.aof.bak  /var/lib/redis/6379/appendonly.aof
 	再启服务 /etc/init.d/redis_6379 start
 若在终端上有删除的操作，一定要先vim /root/appendonly.aof把最后的删操作删掉
 
