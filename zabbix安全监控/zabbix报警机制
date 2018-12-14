@@ -1,0 +1,113 @@
+foxmail---->163.com
+实现zabbix报警功能
+	1）创建触发规则
+	用英文语言环境通过Configuration--> Templates，找到我们之前创建的count.line.passwd模板，点击模板后面的triggers
+	2）配置触发器
+	设置触发器名称，如图-3所示，点击add添加表达式，填写表达式：监控项为账户数量，最近300秒账户数量大于26（根据系统账户数量实际填写），选择触发器报警级别，Add创建该触发器
+2.设置邮件
+	1）创建Media
+	通过Administration（管理）-->Media Type（报警媒体类型）-->选择Email（邮件）设置邮件服务器信息，设置邮件服务器及邮件账户信息
+	2）为用户添加Media
+	在Administration（管理）-->Users（用户）中找到选择admin账户，点击Admin账户后，在弹出的界面中选择Media（报警媒介）菜单-->点击Add(添加)报警媒介，点击Add（添加）后，在Meida Type中填写报警类型，收件人，时间等信息
+3.创建Action动作
+	1）Action动作
+	Action（动作）是定义当触发器被触发时的时候，执行什么行为，通过Configuration（配置）-->Actions（动作）-->Create action（创建动作）
+	2）配置Action动作的触发条件
+	填写Action动作的名称，配置什么触发器被触发时会执行本Action动作（账户数量大于26）
+	3）配置Action动作的具体行为
+	配置动作的具体操作行为（发送信息或执行远程命令），无限次数发送邮件，60秒1次，发送给Admin用户
+	4）测试效果
+
+zabbix自动发现
+	1）创建自动发现规则
+	通过Configuration（配置）-->Discovery（自动发现）-->Create discovery rule（创建发现规则）
+	2）填写规填写自动发现的IP范围（逗号隔开可以写多个），多久做一次自动发现（默认为1小时，仅实验修改为1m）。配置检查的方式：Ping、HTTP、FTP、Agent的自定义key等检查则
+	3）创建Action动作
+	通过Configuration（配置）--> Actions Event source(事件源)：自动发现(Discovery)-->Create action（创建动作）
+	4）配置Action动作具体行为
+	配置动作，添加动作名称，添加触发动作的条件，点击操作（触发动作后要执行的操作指令），操作细节：添加主机到组，与模板链接（HTTP模板）
+
+zabbix主动监控
+	1）为被监控主机安装部署zabbix agent
+	yum -y install gcc pcre-devel
+	tar -xf zabbix-3.4.4.tar.gz 
+	cd zabbix-3.4.4/
+	./configure --enable-agent
+	 make && make install
+
+	2）修改agent配置文件，将agent监控模式修改为主动模式。
+	vim /usr/local/etc/zabbix_agentd.conf 
+	#Server=127.0.0.1,192.168.2.5		注释掉该行
+	StartAgents=0 		设置为0，则禁止被动监控
+	ServerActive=192.168.2.5		允许哪些主机监控本机（主动模式），一定要取消127.0.0.1
+	Hostname=zabbixclient_web2	一定要和zabbix服务器配置的监控主机名称一致（后面设置）
+	RefreshActiveChecks=120		默认120秒检测一次
+	UnsafeUserParameters=1		允许自定义key
+
+	killall zabbix_agentd 
+	zabbix_agentd      
+
+	3）创建主动监控的监控模板，克隆Zabbix自动的监控模板，通过Configuration（配置）-->Templates（模板）-->选择Template OS Linux
+-->全克隆，克隆该模板，新建一个新的模板
+
+	4）修改模板中的监控项目的监控模式，将模板中的所有监控项目全部修改为主动监控模式，通过Configuration（配置）-->Templates（模板）-->选择新克隆的模板，点击后面的Items（监控项）-->点击全选，选择所有监控项目，点击批量更新，将类型修改为：Zabbix Agent（Active主动模式）
+	5）禁用部分监控项目，批量修改监控项的监控模式后，并非所有监控项目都支持主动模式，批量修改后，会发现有几个没有修改主动模式成功，说明，这些监控项目不支持主动模式，关闭即可
+
+	6）手动添加监控主机（主动模式监控），在Zabbix监控服务器，添加被监控的主机（主动模式），设置主机名称：zabbixclient_web2	（必须与被监控端的配置文件Hostname一致），将主机添加到Linux servers组，IP地址修改为0.0.0.0，端口设置为0，为主机添加监控模板，选择刚刚创建的模板（主动模式），添加链接模板到主机
+
+	验证监控效果，查看数据图表，通过Monitoring-->Graphs菜单，选择需要查看的主机组、主机以及图形，查看效果
+
+创建拓扑图
+	1）创建拓扑
+	绘制拓扑图可以快速了解服务器架构，通过Monitoring（监控中）-->Maps（拓扑图），选择默认的Local network拓扑图，编辑即可
+	2）拓扑图图表说明
+	Icon（图标），添加新的设备后可以点击图标修改属性
+	Shape（形状）
+	Link（连线），先选择两个图标，再选择连线
+	3）创建聚合图形
+	通过Monitoring（监控中）-->Screens（聚合图形）-->Create screen(创建聚合图形)即可创建聚合图形
+	Owner：使用默认的Admin用户
+	Name：名称设置为zabbixclient_web2_host
+	Columns：列数设置为2列
+	Rows：行数设置为4行
+
+	4）为聚合图形中添加监控图形
+	选择刚刚创建的聚合图形（zabbixclient_web2_host)，点击后面的构造函数（constructor），点击Change(更改)，设置每行每列需要显示的数据图表
+
+
+自定义监控案例
+	监控Nginx状态，监控网络连接状态
+	1）安装nginx软件，开启status模块
+	./configur --with-http_stub_status_module 
+	 make && make install
+	
+	 vim /usr/local/etc/zabbix_agentd.conf.d/nginx.status
+	UserParameter=nginx.status[*],/usr/local/bin/nginx_status.sh $1
+	killall zabbix_agentd
+	zabbix_agentd
+
+	2）自定义监控脚本
+	 vim /usr/local/bin/nginx_status.sh
+	测试效果
+	zabbix_get  -s 127.0.0.1 -k 'nginx.status[accepts]'
+登陆Zabbix监控Web，创建监控项目item，点击Configuration（配置）-->Hosts(主机)，点击主机后面的items（项目），点击Create item（创建项目）
+
+完成后，点击Update（更新）
+在被监控的客户机：
+vim /usr/local/bin/nginx_status.sh
+#!/bin/bash
+case $1 in
+active)
+curl -s 192.168.4.53/status | awk '/Active/{print $3}';;
+tcp)
+curl -s 192.168.4.53/status | awk 'NR==3{print $1}';;
+wait)
+curl -s 192.168.4.53/status | awk '/Waiting/{print $NF}'
+esac
+
+cd /usr/local/etc/zabbix_agentd.conf.d
+vim nginx.status
+UserParameter=nginx.status[*],/usr/local/bin/nginx_status.sh $1
+
+zabbix 服务器
+	zabbix_get -s 192.168.4.53 -k nginx.status[tcp]
