@@ -1,0 +1,188 @@
+看日志找出错误原因-->百度
+
+git clone git://124.193.128.166/nsd1808.git
+
+更新：gitpull
+
+chronyc sources -v
+阿里云服务器时间地址：ntp.aliyun.com
+
+vmware    其中的esxi安装输个用户名和密码就可以了，有问题重新安装就可以了
+openstack
+
+ps -efww	显示完整的进程
+ps -efww | grep qemu
+
+virsh virt-manager     用户只要与这层交流
+libvirtd
+qemu-kvm
+kvm
+
+
+虚拟机的两部分：
+1.虚拟机的配置文件	/etc/libvirt/qemu/目录下
+2.虚拟机的硬盘	/var/lib/libvirt/images
+
+进入virsh交互模式：
+	virsh
+
+virsh nodeinfo		查看KVM节点
+virsh list [--all]			列出虚拟机
+virsh net-list [--all]		列出虚拟网络
+virsh dominfo 		虚拟机名称	
+virsh start node1		运行虚拟机
+virsh shutdown nde1	关机
+virsh reboot node1	重启虚拟机
+virsh destroy node1	强制关机
+virsh autostart node1	开机自动运行
+
+磁盘格式： raw  qcow2 vdi vmdk ...
+
+qemu-img 命令格式
+qemu-img 命令 参数 块文件名称 大小
+
+常用命令
+create	创建一个磁盘
+conert	转换磁盘格式
+info		查看磁盘信息
+snapshot	管理磁盘快盘
+
+创建新的镜像盘文件
+	cd /var/lib/libvirt/images
+	qemu-img create -f 格式 磁盘路径 大小
+	qemu-img create -f qcow2 disk.img 50G
+查询镜像盘文件的信息
+	qemu-img info 磁盘路径
+	qemu-img info disk.img
+-b 使用后端模版文件创建一个新的模版
+	qemu-img create -b disk.img -f qcow2 disk1.img
+
+远程连接：
+virsh
+qemu+ssh://176.52.10.110:22/system
+查看：	list
+
+创建虚拟网络
+	vim /etc/libvirt/qemu/networks/vbr.xml
+	
+<network>
+  <name>vbr</name>
+  <forward mode='nat'/>
+  <bridge name='vbr' stp='on' delay='0'/>
+  <ip address='192.168.1.254' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.1.100' end='192.168.1.200'/>
+    </dhcp>
+  </ip>
+</network>
+
+net-list 		查看虚拟网络
+net-define vbr.xml	创建虚拟网络
+net-undefine vbr		删除虚拟网络
+net-start vbr		启动虚拟网络
+net-destroy vbr		停止虚拟网络
+net-edit vbr		修改vbr网络配置
+net-autostart vbr		设置vbr虚拟网络开机自启动
+
+可以tab键使用的软件 bash-completion
+
+查看下载绝对路径：yum provides ifconfig
+绝对路径下载 ifconfig
+虚拟机管理工具： bridge-utils
+
+
+修改console接口，可以利用console连接虚拟机
+cat grub > /etc/default/grub
+grub2-mkconfig -o /boot/grub2/grub.cf
+
+
+创建虚拟机:
+1.cd /var/lib/libvirt/images
+	qemu-img create -f qcow2 -b node.img node1.img 20G
+2.   cd/etc/libvirt/qemu/networks
+	vim /etc/libvirt/qemu/networks/node1.xml
+3.virsh define node1.xml
+  	virsh start node1
+
+扩容一定要是在英文环境下，把系统语言改成英文
+LANG=en_US.UTF-8
+LANG=zh_CN.UTF-8
+	lsblk   
+	growpart /dev/vda 1
+	xfs_growfs /
+
+离线访问虚拟机：
+guestmount -a /var/lib/libvirt/images/node1.img  -i /mnt
+umount /mnt
+
+####################################################################################
+
+1.创建后端磁盘
+	cd /var/lib/libvirt/images/
+	qemu-img create -f qcow2 disk.img 20G
+	
+2.创建虚拟网络
+	cd /etc/libvirt/qemu/networks/
+	cp node.xml disk.xml
+	vim disk.xml
+
+	virsh net-define disk.xml
+	virsh start disk
+	
+3.虚拟机添加虚拟机
+
+4.安装工具软件 bash-completion  bridge-utils ifconfig git
+
+5.系统初始化
+	vim /etc/selinux/config
+	SELINUX=disabled
+	
+	yum remove -y NetworkManager-* firewalld-* python-firewall
+	
+
+6.删除网络配置个性化信息
+	vim /etc/sysconfig/network-scripts/ifcfg-eth0
+		DEVICE="eth0"
+		ONBOOT="yes"
+		NM_CONTROLLED="no"
+		TYPE="Ethernet"
+		BOOTPROTO="dhcp"
+	systemctl restart network
+
+禁用空路由
+	/etc/sysconfig/network
+	NOZEROCONF="yes"
+
+7.配置console磁盘分区里个性化信息
+	cat grub > /etc/default/grub		grub 模版
+重新生成grub.cfg
+	grub2-mkconfig -o /boot/grub2/grub.cfg
+
+修改/etc/fstab 文件中UUID修改成系统设备
+	/dev/vda1
+
+8.安装分区扩展软件
+	yum install -y cloud-utils-growpart
+设置第一次开机自动扩容根目录
+	chmod 755 /etc/rc.local
+根分区扩容
+	growpart /dev/vda 1
+	xfs_growfs /
+
+关闭虚拟机后执行信息清理工作 （软件libguestfs-tools)
+	virt-sysprep -d node
+
+快速创建虚拟机
+	cd /var/lib/libvirt/images
+	qemu-img create -b disk.xml -f qcow2 disk1.xml
+	cd /etc/libvirt/qemu
+	cp  node.xml disk1.xml			node.xml  模版
+	vim disk1.xml				修改好名称
+	virsh define disk1.xml
+	virsh start disk1
+	
+
+
+
+
+
