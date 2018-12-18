@@ -6,3 +6,6 @@ git commit -m update
 update
  git push
 
+git add  xx
+git commit -m "xx"
+git push
