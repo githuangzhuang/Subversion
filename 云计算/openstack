@@ -1,0 +1,191 @@
+虚拟机上：
+openstack 环境准备
+ 	CentOS7-1708.iso 
+	RHEL7OSP-10.iso
+	RHEL7-extras.iso 盘中所有目录作为yum源
+
+配置IP地址
+	配置eth0为公共网络
+	配置eth1为隧道接口
+	cp ifcfg-eth0 ifcfg-eth0			ifcfg-eth0  模版
+
+DNS解析	vim /etc/hosts			验证：ping 主机名
+		自己IP	 自己主机名
+		nova01IP  主机名
+
+DNS	vim /etc/resolv.conf			验证：ping 百度
+	只留下 nameserver 192.168.1.254			
+
+NTP
+	vim /etc/chrony.conf
+	allow 0/0				在真机上添加
+
+时间同步,虚拟机
+	vim /etc/chrony.conf
+	server 192.168.1.254 iburst
+	chronyc sources -v
+
+模版卸载了此不可省略
+关闭NetworkManager 服务
+禁用SELINUX
+卸载firewalld
+
+配置卷组镜像替代
+
+
+安装网络openstack时，需要密钥验证
+	lftp 192.168.1.254
+	cd centos
+	get RPM-GPG-KEY-CentOS-7
+	exit
+	rpm --import RPM-GPG-KEY-CentOS-7
+
+安装额外软件包
+	yum -y install qemu-kvm libvirt-client libvirt-daemon libvirt-daemon-driver-qemu python-setuptools
+
+#####################################################################################3
+第一台虚拟机（openstack）
+	4 cpu   9G 内存   50G 硬盘   2 网卡
+真机上：
+1.修改cpu和内存
+vim /etc/libvirt/qemu/openstack.xml或者 virsh edit openstack
+	unit='GB'>9<
+	unit='GB'>9<	
+	>4</vcpu
+2.修改硬盘大小：
+cd /var/lib/libvirt/images
+	rm -rf openstack.img			若开始配的不是50G，要先关虚拟机再删
+	qemu-img create -f qcow2 -b node.xml openstack.img 50G
+3.添加网卡
+virsh edit openstack
+	<interface type..>	复制这一区间粘贴到后面
+	...
+	</interface>
+	<interface >
+	<source bridge='private1'>	修改网卡留下这四行其余的删除掉
+	<model type='virtio'/>
+	</interface> 
+ 
+virsh start openstack
+virsh console openstack
+配置静态IP地址
+	 vim /etc/sysconfig/network-scripts/ifcfg-eth0
+	...
+	BOOTPROTO="static"
+	IPADDR="192.168.1.10"
+	NETMASK="255.255.255.0"
+	GATEWAY="192.168.1.254" 
+systemctl restart network
+
+修改第二个网卡 ifconfig -a
+  cd /etc/sysconfig/network-scripts/
+  cp ifcfg-eth0  ifcfg-eth1
+  	 vim ifcfg-eth1
+	DEVICE="eth1"               修改这两行
+	IPADDR=“192.168.4.10”
+	#GATEWAY=			   删除网关
+systemctl restart network
+
+
+安装packstack 是管理的
+	yum -y install openstack-packstack
+###########################################################################
+配置第二台虚拟机，不用安装packstack,跟第一台配置一样
+	 192.168.1.11 (nova01)
+	2 cpu  6G  2网卡   50G 硬盘
+
+配yum源同步：
+	rsync -av openstack:/etc/yum.repos.d /etc
+DNS解析：
+	vim /etc/hosts
+	第一台管理主机IP  主机名
+	本机IP			主机名
+
+nova01 环境准备：
+1.创建一个50G的前端盘
+2.修改xml的配置文件 内存、网卡、硬盘
+3.配置IP地址 eth0、eth1
+4.配置yum源（10731个）
+5.配置 /etc/hosts 主机名和ip对应关系
+6.修改 /etc/resolv.conf
+7.安装 qemu-kvm libvirt-daemon libvirt-client libvirt-daemon-driver-qemu python-setuptools
+8.扩容磁盘空间
+9.在openstack 主机的/etc/hosts添加 novao1
+10.时间同步 /etc/chrony.conf
+
+以上准备好以后执行以下命令：
+	packstack --gen-answer-file answer.ini 
+  	vim answer.ini
+11.    _PASSWORD= 	密码不用改
+42. 	_INSTALL=n
+75.	_SERVERS=192.168.1.254	时间服务器地址
+554.	_CREATE=y		不用改				n  就得自己创建卷组
+840.	_DRIVERS=flat,vxlan	驱动类型
+876.	_GROUP=239.1.1.5	设置组播地址,最后一个随意不能为0和255,其他固定
+910.	_MAPPINGS=physnet1:br-ex 	 //物理网桥的名称
+921.	_IFACES=br-ex:eth0	br-ex桥的名称与eth0连接，管理eth0,网桥与哪个物理网卡连接
+936.	_TUNNEL_IF=eth1
+1179.	_PROVISION_DEMO=n   //DEMO是否测试
+
+	packstack    --answer-file=answer.ini	等待半小时
+
+若页面无法打开，执行下面操作：
+cd /etc/httpd/conf.d/
+    vim 15-horizon_vhost.conf
+     35   WSGIProcessGroup apache
+     36   WSGIApplicationGroup %{GLOBAL}     //添加这一行
+ apachectl  graceful  //重新载入配置文件
+
+#####################################################################
+管理项目;
+	firefox 192.168.1.10
+	ls /root
+	cat keystonerc_admin	keystonerc_admin 生成的文件，有用户名和密码
+	export OS_USERNAME=admin  //用户名
+	export OS_PASSWORD=1bb4c987345c45ba  //密码
+##################################################################################	
+项目：一个项目就是一个企业，买几核多大内存
+	
+对openstack添加两块磁盘，手动创建卷组
+qemu-img create -f qcow2 disk.img 20G
+qemu-img create -f qcow2 node.img openstack.img 50G
+virsh edit openstack
+添加个磁盘: <disk type>				复制这一区段，修改 两个地方
+		dvd='vdb'
+		<source file='/var/lib/libvirt/images/disk.img'/>	
+
+创建物理卷组
+yum install lvm2
+pvcreate /dev/vdb
+vgcreate cinder-volumes /dev/vdb 
+
+后续的配置跟开始一样
+#####################################################################################
+安装好openstack之后在修改下面的
+对nova01扩容
+在openstack上：
+1.修改配置
+	vim answer.ini
+	98. 	_HOSTS=192.168.1.10,192.168.1.11
+	102.	_HOSTS=192.168.1.10,192.168.1.11
+2.再安装packstack
+packstack --answer-file=answer.ini
+
+3.安装过程输入nova01密码
+root@192.168.1.11's password:	nova01的密码
+
+
+
+创建好项目--》创建用户  主项目  角色（_memeber_)
+
+
+
+
+
+
+
+
+
+
+
+
