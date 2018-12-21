@@ -1,0 +1,118 @@
+快速搭yum源
+mkdir /var/ftp/docker
+mv docker-engine-* /var/ftp/docker
+createrepo /var/ftp/docker
+
+vim /etc/yum.repos.d/docker
+...
+baserul=ftp://192.168.1.254/docker
+...
+###################################################################33#
+docker-engine-1.12.1-1.el7.centos.x86_64.rpm
+docker-engine-selinux-1.12.1-1.el7.centos.noarch.rpm
+安装docker-engine
+systemctl restart docker
+systemctl enable docker
+ifconfig	有docker0说明环境部署完成
+docker version	查看版本
+
+查看镜像：
+		docker images
+收索busybox有关的镜像：
+		docker search busybox
+下载镜像
+		docker pull busybox
+删除镜像：
+	docker rmi  busybox
+
+导入镜像：docker导入镜像的文件为tar包
+		docker save  busybox:latest >busybox.tar
+查看文件的内型
+		file busybox.tar
+查看tar包内容
+		tar tvf busybox.tar
+
+解busybox.tar 包
+		docker load < ./busybox.tar
+#############################################################################
+准备 docker_images.zip
+	yum -y install unzip
+	unzip docker_images.zip
+cd docker_images
+	for i in *;do;docker load < $i;done
+
+启动镜像,是创建一个新的docker
+	docker run -it   镜像名：标签  容器内的命令	i 交互  t 终端
+	docker run -it centos:latest /bin/bash
+	docker run -it centos			默认也是/bin/bash和latest
+
+容器内配yum源
+	cd /etc/yum.repos.d/
+	rm -rf C*
+	vi dvd.repo
+	..
+	baseurl=ftp://192.168.1.254/centos
+
+	yum -y install net-tools
+
+查看所有的docker:	 
+
+docker run -d nginx 	启动nginx的镜像
+docker ps			查看后台运行的容器
+docker ps -q 		只显示容器ID
+docker ps -a		显示所有的容器，包括没有启动的
+docker ps -qa		显示所有容器ID
+docker history centos	查看centos镜像历史
+docker inspect centos	查看镜像的底层信息
+docker pull			下载镜像
+docker push			上传镜像
+docker tag			修改镜像名称和标签
+docker tag busybox:latest oo:xx		跟硬连接一样
+
+docker run		运行容器
+docker ps		查看容器列表
+docker stop	ID号	关闭容器，ID号不一定全部，只要是唯一就行，启动也是一样
+docker start ID号	启动容器
+docker restart	重启容器
+docker attach|exec	进入容器
+docker top		查看容器进程列表
+docker rm		删除容器
+
+ls -i		查看文件id
+
+1.busybox 启动失败,后面不能接/bin/bash
+	docker run -it busybox:latest
+
+2.ubuntu/debian 没有yum怎么办		
+yum-->apt-get
+rpm-->dpkg					
+
+3.centos我修改的配置每次启动都会自动还原
+  docker run 是启动新的一个docker
+
+4.nginx、redis 启动失败
+
+docker inspect -f '{{}}' ID	截取对应的信息
+删除所有的容器：要先关闭容器才能删
+	docker rm $(docker stop $(docker ps -qa))
+
+进入容器：
+docker exec -it ID号 /bin/bash
+
+docker attach ID号  进入容器一般不用，若进了执行下面退出，exit退出进程也杀了
+ctrl+p+q	按住ctrl 再按下p，再按下q   只能针对有终端的才有用
+
+内部命令
+enable -n cd	cd 无用
+enable -s cd	恢复
+
+set -r	cd 无权限
+exit		恢复
+
+备份一天前一天前
+tar czf web-$(date -d '1 day ago' +%F).tar.gz  /var/www/html
+
+
+
+
+
