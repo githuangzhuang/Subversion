@@ -1,0 +1,92 @@
+自定义镜像：下载安装需要的功能，封装成镜像，创建容器后就有需要的功能，批量节省时间
+	docker run -it centos
+	rm -rf /etc/yum.repos.d/*
+	vi /etc/yum.repos.d/dvd.repo
+	yum -y install net-tools iproute psmisc vim-enhanced
+创建镜像：
+	docker commit 8d07ecd7e345 myos
+	docker run -itd myos
+
+mkdir Dockerfile
+cd Dockerfile
+vim aa
+FROM centos:latest
+RUN rm -rf /etc/yum.repos.d/*
+ADD centos.repo /etc/yum.repos.d/centos.repo
+RUN yum -y install net-tools psmisc lftp iproute vim
+
+
+FROM myos:latest
+RUN yum install -y openssh-server initscripts
+RUN	sshd-keygen
+RUN	echo "a" | passwd --stdin root
+ENV EnvironmentFile=/etc/sysconfig/sshd
+EXPOSE 22							开放22端口
+CMD ["/usr/sbin/sshd", "-D"]
+
+sshd的启动命令路径
+/usr/lib/systemd/system/sshd.service
+
+自定义yum私有仓库
+vim /etc/docker/daemon.json
+  {
+	"insecure-registries" :["192.168.1.12:5000"]
+  }
+
+ systemctl restart docker
+docker run -itd -p 5000:5000 registry
+
+等入192.168.1.13，显示 {}成功
+curl http://192.168.1.10:5000/v2/
+
+docker tag busybox:latest 192.168.1.12:5000/busybox:latest
+docker push 192.168.1.12:5000/busybox:latest
+scp /etc/docker/daemon.jso  192.168.1.13:/etc/docker/
+
+在192.168.1.13主机上：
+docker run -it 192.168.1.12:5000/myos:latest
+
+批量上传
+for i in ngin centos test redis
+do
+docker tag $i 192.168.1.12:5000/$i
+done
+
+将真实机目录挂载到容器中提供持久化存储
+docker  run -it -v  /etc/webroot:/abc centos bash
+
+NFS服务器,真机
+	yum -y install nfs-utils
+	mkdir /content
+	vim /etc/exports
+/content  *(rw, no_root_squash)
+	systemctl restart nfs
+	exportfs -rv
+	chmod 777 /content
+	echo "hello" > /content/index.html
+配置客户端
+	yum -y install nfs-utils
+	systemctl restart nfs
+	showmount -e 192.168.1.254
+	mkdir /mnt/qq
+	mount -t nfs 192.168.1.254:/content  /mnt/qq
+
+   docker run -d -p 80:80 -v /mnt/qq:/var/www/html -it myos:http
+	curl 192.168.1.12
+
+在另外一台客户端做同样操作，并echo "hello" > /mnt/qq/a.sh ,在所有客户端都能改文件
+
+
+创建网桥	
+	docker run -itd myos
+
+使用自定义的网桥
+	docker network create --subnet  10.10.10.0/24 docker1
+	docker run --network=docker1 -itd myos
+
+客户端访问容器内的资源
+	docker run -itd -v /mnt:/var/www/html -p80:80 nginx
+	访问宿主ip
+
+docker 集群工具 k8s
+
