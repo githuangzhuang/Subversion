@@ -1,0 +1,94 @@
+ES集群安装
+1.域名解析 /etc/hostname
+2.安装软件 java
+3.安装elasticsearch的rpm包
+4.修改配置文件，顶格写  /etc/elasticsearch/elasticsearch.yml
+5.启服务
+6.集群每个节点也同样操作，只要修改主机名
+	1.vim /etc/hostname	  
+	  192.168.1.11  es1
+	  192.168.1.12  es2
+	    ...
+	2. yum -y install java-1.8.0-openjdk.x86_64
+	3. yum -y install elasticsearch-2.3.4.rpm
+	4. vim /etc/elasticsearch/elasticsearch.yml
+	  cluster.name: myelk        //配置集群名字
+	  node.name: se1        //当前主机名称
+	  network.host: 0.0.0.0     // 0.0.0.0（监听所有地址）
+	  discovery.zen.ping.unicast.hosts: ["se1", "se2","se3"]  /声明集群里的主机成员有谁，不需要全部写进去/
+	5.systemctl restart elasticsearch
+	  systemctl enable elasticsearch
+
+部署查件
+	查件在娜一台机器上，只能在娜台机器上使用
+cd /usr/share/elasticsearch/bin
+	./plugin install file///root/elasticsearch-head-master.zip
+	./plugin install file///root/elasticsearch-kopf-master.zip
+	./plugin install file///root/bigdesk-master.zip
+查看安装的插件
+	./plugin list
+ 
+访问head插件 firefox http://192.168.1.15:9200/_plugin/head
+访问kopf插件 firefox http://192.168.1.15:9200/_plugin/kopf
+访问bigdesk插件:  
+
+json格式,在终端执行
+
+创索引
+curl -XPUT http://192.168.1.11:9200/nsd1808/ -d '{
+        "settings":{
+                "index":{
+                        "number_of_shards": 5,
+                        "number_of_replicas": 1
+                        }
+                }
+        }'
+
+插入数据
+curl -XPUT http://192.168.1.11:9200/nsd1808/js/01 -d '{
+        "姓名"： "蹦蹦",
+        "爱好"： "唱歌",
+        "阶段"： 1，
+        “年龄": 25
+}'
+
+修改数据
+curl -XPOST http://192.168.1.12:9200/nsd1808/js/2/_update -d ' { "doc": { "年龄": 18 }}'
+
+
+增加另外一台主机安装kibana
+1.域名解析 /etc/hosts	
+	192.168.1.10  kibana
+	192.168.1.11  es1
+	 ....
+2.安装 kibana
+	yum -y install kibana
+3.修改配置文件
+	vim /opt/kibana/config/kibana.yml
+server.port: 5601
+server.host: "0.0.0.0"
+elasticsearch.url: http://192.168.1.61:9200
+kibana.index: ".kibana"
+kibana.defaultAppId: "discover" 
+elasticsearch.pingTimeout: 1500
+elasticsearch.requestTimeout: 30000
+elasticsearch.startupTimeout: 5000 
+
+4.启服务
+	systemctl restart kibana
+	systemctl enable kibana
+5.验证
+	firefox 192.168.1.10:5601
+点击status查看
+
+
+
+
+
+
+
+
+
+
+
+
