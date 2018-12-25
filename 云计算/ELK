@@ -55,6 +55,9 @@ curl -XPUT http://192.168.1.11:9200/nsd1808/js/01 -d '{
 修改数据
 curl -XPOST http://192.168.1.12:9200/nsd1808/js/2/_update -d ' { "doc": { "年龄": 18 }}'
 
+删除数据
+curl -XDELETE 192.168.1.11:9200/nsd1808/js/3
+
 
 增加另外一台主机安装kibana
 1.域名解析 /etc/hosts	
