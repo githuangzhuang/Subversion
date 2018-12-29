@@ -133,6 +133,14 @@ handlers:
          - “{{id}}”
          - "{{un}}"
 
+显示受到影响的主机
+ansible-playbook httpd.yml --list-hosts
+
+显示工作的task
+ansible-playbook httpd.yml --list-tasks
+
+显示将要运行的tag
+ansible-playbook httpd.yml --list-tags
 
 
 
