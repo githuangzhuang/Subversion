@@ -1,0 +1,139 @@
+ansible 七种武器
+1.ansible 命令，用于执行临时性的工作，必须掌握
+2.ansible-doc 是ansible模块文档说明，必须掌握
+3.ansible-console 是ansible为用户提供的交互式工具
+4.ansible-galaxy 从github上下载管理roles的一款工具
+5.ansible-playbook 是日常应用中使用频率最高的命令，必须掌握
+6.ansible-vault 主要用于配置文件加密
+7.ansible-pull 与push工作模式机制刚好相反
+
+playbook格式
+
+vim xx.yml
+---			第一行，表示开始
+- hosts: all		主机
+  remote_user: root	用户
+  tasks: 			执行命令
+    - ping:
+
+ansible-playbook  xx.yml 
+
+
+---
+- hosts: web
+  remote_user: root
+  tasks:
+    - lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen'
+        line: 'Listen 80'
+    - service:
+        name: httpd
+        enabled: yes
+        state: restarted
+    - copy:
+        src: /root/index.html
+        dest: /var/www/html/index.html
+
+使用变量 vars
+---
+- hosts: web
+  remote_user: root
+  vars:
+    username: nb
+  tasks:
+    - name: add user "{{username}}"
+      user:
+        name: "{{username}}"
+    - shell: echo 123|passwd --stdin "{{username}}"
+    - shell: chage -d 0 "{{username}}"
+
+可以直接在终端调用
+ansible-playbook -e '{"username": "dd"}' name.yml
+另外创建一个文件调用
+vim aa
+{
+  "username": "aa"
+}
+
+ansible-playbook name.yml -e '@aa'
+
+密码过滤
+---
+- hosts: web
+  remote_user: root
+  vars:
+    username: lisi
+  tasks:
+    - name: add user "{{username}}"
+      user:
+        name: "{{username}}"
+        password: "{{'123'|password_hash('sha512')}}"   密码过滤 
+
+调用：handlers
+tasks:
+   - linefile:
+         ......
+       tags: editconf
+       notify:
+            - reload apache
+         ......
+handlers:
+   - name: reload apache
+     service: 
+       name: httpd
+       state: restarted
+       enabled: yes
+
+触发：当负载达到0.7时就停止httpd服务
+---
+- hosts: web
+  remote_user: root
+  tasks:
+    - shell: uptime | awk '{printf("%.2f",$(NF-2))}'
+      register: result
+    - service:
+        name: httpd
+        state: stopped
+      when: result.stdout | float > 0.7
+
+循环：
+---
+- hosts: web
+  remote_user: root
+  tasks:
+     - user:
+         name: "{{item.name}}"
+         group: "{{item.group}}"
+         password: "{{item.pwd|password_hash('sha512')}}"
+       with_items:
+            -
+           name: "nb"
+           group: "users"
+           pwd: "bb"
+            -
+           name: "dd"
+           group: "bin"
+           pwd: "xdd"
+            -
+           name: "jj"
+           group: "apache"
+           pwd: "plj"
+嵌套循环
+
+---
+- hosts: web
+  remote_user: root
+   vars:
+     id: [1 ,2, 3]
+     un: ['a', 'b', 'c']
+   tasks:
+     - shell: echo "{{item}}"
+       with_nested:    
+         - “{{id}}”
+         - "{{un}}"
+
+
+
+
+
