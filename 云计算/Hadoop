@@ -1,0 +1,93 @@
+Hadoop 三大核心组件
+HDFS 分布式文件系统
+MapReduce 分布式计算框架
+Yarn 集群资源管理系统
+
+1.安装java环境
+yum -y install java-1.8.0-openjdk-devel
+
+2.安装hadoop
+	tar -xf hadoop-2.7.6.tar.gz
+	mv hadoop-2.7.6 /usr/local/hadoop
+	cd /usr/local/hadoop/
+	rpm -ql  java-1.8.0-openjdk
+复制：/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.131-11.b12.el7.x86_64/jre
+
+	cd ./etc/hadoop/
+	vim hadoop-env.sh
+
+JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.131-11.b12.el7.x86_64/jre"
+export HADOOP_CONF_DIR="/usr/local/hadoop/etc/hadoop"
+
+	cd /usr/local/hadoop/
+	./bin/hadoop
+
+对aa目录里面的数据进行分析：
+mkdir /usr/local/hadoop/aa
+cp *.txt /usr/local/hadoop/aa
+./bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.6.jar wordcount aa bb
+//wordcount为参数 统计aa这个文件夹，存到bb这个文件里面（这个文件不能存在，要是存在会报错，是为了防止数据覆盖）
+
+cat   bb/part-r-00000    //查看
+
+ssh不用输入yes的情况
+vim /etc/ssh/ssh_config
+Host * 
+... 
+StrictHostKeyChecking no      35 StrictHostKeyChecking   复制放到Host* 下
+
+vim /usr/local/hadoop/etc/hadoop/core-site.xml
+
+<configuration>			最后面
+<property>
+  <name>fs.defaultFS</name>
+   <value>hdfs://ansible:9000/</value>
+ </property>
+ <property>
+  <name>hadoop.tmp.dir</name>
+   <value>/var/hadoop</value>
+</property>
+<configuration>
+
+参考www.hadoop.apache.org/docs/r2.7.6/最左边最下面的core-default.xml和hdfs-default.xml
+
+vim /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+
+<configuration>
+<property>
+  <name>dfs.namenode.http-address</name>
+   <value>ansible:50070</value>
+ </property>
+ <property>
+  <name>dfs.namenode.secondary.http-address</name>
+   <value>ansible:50090</value>
+</property>
+ <property>
+  <name>dfs.replication</name>
+   <value>2</value>
+</property>
+</configuration>
+
+vim /usr/local/hadoop/etc/hadoop/slaves 
+node1
+node2
+node3				主机名，除本机以外的其它主机名
+
+同步配置到其它主机node1，node2，node3
+rsync -aSH --delete /usr/local/hadoop node1:/usr/local/
+
+node1,node2,node3安装java环境,并创建 mkdir /var/hadoop
+yum -y install java-1.8.0-openjdk-devel
+
+管理机上：
+cd /usr/local/hadoop/
+./bin/hdfs namenode -format         //格式化 namenode
+./sbin/start-dfs.sh        //启动
+./bin/hdfs dfsadmin -report        //查看集群是否组建成功
+Live datanodes (3):        //有三个角色成功
+
+
+
+
+
+
