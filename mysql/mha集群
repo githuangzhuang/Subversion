@@ -105,7 +105,7 @@ master_ip_failover_script=故障切换脚本，监视主服务故障了运用脚
 5.把vip地址绑定在当前的主库服务器51的 eth0接口
 	ifconfig eth0:1 192.168.4.100
 	
-
+cd /usr/local/bin/
 1)测试ssh配置
 	masterha_check_ssh --conf=/etc/mha/app1.cnf
 2)测试主从同步配置
