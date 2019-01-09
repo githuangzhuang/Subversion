@@ -77,8 +77,7 @@ vim /etc/mha/app1.cnf
 	password=密码
 
 	[server1]		
-	hostname=192.168.4.51				设置为候选master
-	candidate_master=1
+	hostname=192.168.4.51				设置为主master
 	port=3306						端口默认是3306可以不用写
 
 	[server1]		
