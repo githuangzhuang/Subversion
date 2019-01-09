@@ -67,5 +67,12 @@ listen stats
 启服务 haproxy
 
 
-
+数据库的
+listen mycat *:3306
+	mode tcp	# mysql 得使用 tcp 协议
+	option tcpka	# 使用长连接
+	balance leastconn	# 最小连接调度算法,数据库用轮询会不均衡
+	server mycat_01 192.168.1.252:8066 check inter 3000 rise 1 maxxonn 1000 fall 3
+	server mycat_02 192.168.1.250:8066 check inter 3000 rise 1 maxxonn 1000 fall 3
+	server mycat_03 192.168.1.251:8066 check inter 3000 rise 1 maxxonn 1000 fall 3
 
