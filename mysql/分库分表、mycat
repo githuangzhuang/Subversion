@@ -75,3 +75,28 @@ mycat/conf/	partition-hash-int.txt 中查看
 	
 删除用户权限：drop user yaya@"%";
 
+
+mycat 读写分离
+
+vim schema.xml
+<?xml version="1.0"?>
+  2 <!DOCTYPE mycat:schema SYSTEM "schema.dtd">
+  3 <mycat:schema xmlns:mycat="http://org.opencloudb/">
+  4 
+  5         <schema name="TESTDB" checkSQLschema="false" sqlMaxLimit="100" 
+  6 dataNode="dn1">          #指定集群
+  7         </schema>
+  8         <dataNode name="dn1" dataHost="localhost1" database="db1" />
+  9         <dataHost name="localhost1" maxCon="1000" minCon="10" balance="1"
+ 10                 writeType="0" dbType="mysql" dbDriver="native" switchType="    1"  slaveThreshold="100">
+ 11                 <heartbeat>select user()</heartbeat>
+ 12                 <!-- can have multi write hosts -->
+ 13                 <writeHost host="hostM1" url="192.168.1.100:3306" user="root"        #指定写用户
+ 14                         password="123456">
+ 15 
+ 16                 <readHost host="hosts1" url="192.168.1.76:3306" user="read"     password="123456" />   #指定读用户
+ 17                 <readHost host="hosts2" url="192.168.1.212:3306" user="read"    password="123456" />
+ 18                 <readHost host="hosts3" url="192.168.1.194:3306" user="read"    password="123456" />
+ 19                 </writeHost>
+ 20         </dataHost>
+ 21 </mycat:schema>
