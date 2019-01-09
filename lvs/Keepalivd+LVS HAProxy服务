@@ -9,8 +9,9 @@
 配置文件 /etc/keepalived/keepalived.conf
 state  MASTER                #主服务器
 interface eth0               #定义网络接口，必须是eth0
-virtual_router_id 60      #分组，主辅VRID号必须一致
-priority 100             #优先级
+virtual_router_id 60      #分组，主辅VRID号必须一致          
+priority 100             #优先级                        
+nopreempt              #不抢占            ! nopreempt  #抢占   对于两个集群的
 auth_pass 1111           #主辅密码必须一致
 
 virtual_ipaddress {192.168.4.15} #配置VIP
