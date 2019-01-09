@@ -87,8 +87,8 @@ vim schema.xml
   6 dataNode="dn1">          #指定集群
   7         </schema>
   8         <dataNode name="dn1" dataHost="localhost1" database="db1" />
-  9         <dataHost name="localhost1" maxCon="1000" minCon="10" balance="1"
- 10                 writeType="0" dbType="mysql" dbDriver="native" switchType="    1"  slaveThreshold="100">
+  9         <dataHost name="localhost1" maxCon="1000" minCon="10" balance="3"
+ 10                 writeType="0" dbType="mysql" dbDriver="native" switchType="1"  slaveThreshold="100">
  11                 <heartbeat>select user()</heartbeat>
  12                 <!-- can have multi write hosts -->
  13                 <writeHost host="hostM1" url="192.168.1.100:3306" user="root"        #指定写用户
@@ -100,3 +100,7 @@ vim schema.xml
  19                 </writeHost>
  20         </dataHost>
  21 </mycat:schema>
+
+balance="1", 全部的readhost与stand by writehost 参与select语句的负载均衡
+balance=“2”， 所有读操作都随机的在writehost，readhost上分发
+balance=“3”，所有读请求随机的分发到writerhost对应的readhost执行，writerhost不负担读压力
