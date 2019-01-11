@@ -166,9 +166,10 @@ show processlist;  显示当前连接的用户程序列表，访问的什么库�
 
 	 show variables like "query_cache%";
 
-query_cache_type=0/1/2	查询缓冲是否启动，0是关，1是没有超出查询的限制，2是每次查询时都要放入查询缓冲里
-query_cache_limit		查询缓冲的限制是多少大，超过了就不能放到查询缓冲里
-query_cache_wlock_invalidate	查询缓冲的写锁，对myisam存储引擎有效，等修改完内容后再查查询给客户端
+query_cache_type=0/1/2	查询缓存是否启动，0是关，1是没有超出查询的限制，2是每次查询时都要放入查询缓冲里
+query_cache_limit		查询缓存的限制是多少大，超过了就不能放到查询缓冲里
+query_cache_wlock_invalidate	查询缓存的写锁，对myisam存储引擎有效，等修改完内容后再查查询给客户端
+global.query_cache_size         查询缓存的空间大小
 
 show global status like "qcache%";
 Qcache_hits     +1			查询是在查询缓冲里查到的值就加 1
