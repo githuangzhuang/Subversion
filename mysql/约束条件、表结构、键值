@@ -158,7 +158,7 @@ insert into yg(name) values("tom");
 
 创建外键：
 create table gz(
-    -> gz_id int(primary key),
+    -> gz_id int primary key,
     -> pay float(7,2),
     -> foreign key(gz_id) references yg(yg_id)
     -> on update cascade on delete cascade
