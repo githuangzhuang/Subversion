@@ -177,6 +177,6 @@ update yg set yg_id=8 where yg_id=2;
 删除同步数据功能：
 show create table gz\G;          #先shouw，查看表名CONSTRAINT后面，gz_ibfk_1
 
-alter batle gz drop foreign key gz_ibfk_1;
+alter table gz drop foreign key gz_ibfk_1;
 
 
