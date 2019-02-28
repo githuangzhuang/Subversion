@@ -1,0 +1,47 @@
+varchar和varchar2的区别在与后者把所有字符都占两字节，前者只对汉字和全角等字符占两字节,长度不固定，null值不占用存储空间
+char 长度固定，null值占用存储空间
+nvarchar和nvarchar2 通常用于支持多国语言类似系统的定义，适用于存放中文，长度不固定
+
+字段值差异比较大，索引比较多，要频繁查询，一般使用 varchar2
+比如有一个性别字段，里面存放“男，女”的其中一个值，两种常用选择
+CHAR(2) 和 NCHAR(1)
+
+数字类型：
+NUMBER(P，S) p表总长度，s表示小数位数且四舍五入，NUMBER（10,2）若存储值为123.4567，则实际存储为123.457，最大存储达38位
+INT/INTEGER 相当于NUMBER(38),若有小数则会四舍五入
+
+时间类型：
+timestamp/date 综合比较timestamp小数秒到小数点9位，根据业务场景选择
+
+CLOB 二进制及大文本数据，不需要进行字符集转换的“二进制”数据，适合存储电子表格、字处理文档、图像文件等纯文本信息
+
+######################################################################################################################
+
+存储过程：带参数
+create or replace procedure NoParPro (a  b) 
+ as  
+定义变量  ；
+ begin 
+执行sql语句 ；
+ exception
+存储过程异常还回信息；
+ end;  
+
+exec 存储过程名；
+
+create  (unique) index  索引名 on 表名(字段);
+低效： select loc_id,loc_dese,region from location where loc_id=10 or region = "melbourne";
+高效： select   loc_id,loc_desc,region from location  where loc_id=10 union select loc_id,loc_desc,region from location where region = “melbourne”
+
+用exists替代in，not exists 替代 not in:
+select * from 表名 where emp > 0 and exists (select x from demp where demp.deptn = emp.deptn and loc = 'melb')
+
+交叉表：tableA为交叉表，oracle对from子句从右向左扫描，应该把交叉表放在最末尾，然后才是最小表
+select count(1) from tableB b, tableC c, tableA a where a.id=b.id and a.id=c.id;
+
+where子句后面的条件过滤讲究，从上到下，从右到左，从大到小
+select * from tableA a where a.id < (select count(1) from tableA where id=a.id) and a.id > 500 and a.lx = '2b';
+
+如果 taB 记录的比 taA 记录少，应该把记录少的放在最右边
+select count(*) from taA,taB;
+
