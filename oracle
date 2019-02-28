@@ -46,3 +46,23 @@ select * from tableA a where a.id < (select count(1) from tableA where id=a.id) 
 如果 taB 记录的比 taA 记录少，应该把记录少的放在最右边
 select count(*) from taA,taB;
 
+集合运算就是将两个或者多个结果集组合成为一个结果集。集合运算包括：
+ INTERSECT(交集)，返回两个查询共有的记录。
+ UNION ALL(并集)，返回各个查询的所有记录，包括重复记录。
+ UNION(并集)，返回各个查询的所有记录，不包括重复记录。
+ MINUS(补集)，返回第一个查询检索出的记录减去第二个查询检索出的记录之后剩
+余的记录。
+
+例题：查询出 dept 表中哪个部门下没有员工。只需求出 dept 表中的部门号和 emp
+表中的部门号的补集即可。
+
+select depino from dept minus select depino from emp;
+
+用union插入多条记录
+insert into dept select 50,'公安部','台湾' from dual union select 60,'研发部','西安' from dual union select 70,'培训部','西安' 
+from dual;
+
+
+
+
+
